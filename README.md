@@ -214,10 +214,11 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | Quarter | Feature | Description |
 |---------|---------|-------------|
 | **2025 Q3** | **✅ Windows Support** | Cross-platform compatibility bringing TuriX automation to Windows environments *(Now Available)* |
-| **2025 Q3** | **✅ Enhanced MCP Integration** | Deeper Model Context Protocol support for seamless third-party agent connectivity |
-| **2025 Q3** | **Next-Gen AI Model** | Significantly improved reasoning and task execution capabilities |
+| **2025 Q3** | **✅ Enhanced MCP Integration** | Deeper Model Context Protocol support for seamless third-party agent connectivity *(Now Available)*|
+| **2025 Q4** | **Next-Gen AI Model** | Significantly improved reasoning and task execution capabilities |
+| **2025 Q4** | **Planner** | Understands user intent and makes step-by-step plans to complete tasks |
 | **2025 Q4** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
-| **2025 Q4** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
-| **2025 Q4** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
-| **2026 Q1** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
-| **2026 Q1** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
+| **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
+| **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
+| **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
+| **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
