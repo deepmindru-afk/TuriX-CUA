@@ -1,6 +1,6 @@
 {
   "logging_level": "INFO",
-  "working_dir_base": "C:/Users/tongy/Desktop/turix/trainingdata/task",
+  "working_dir_base": "../turix/trainingdata/task",
   "cleanup_previous_runs": true,
   
   "llm": {
@@ -11,7 +11,7 @@
   },
 
   "agent": {
-    "task": "open Chrome, go to youtube, and search for AI tutorials",
+    "task": "open Chrome, go to github, and search for turix-cua in the github webpage. Enter the TuriX-CUA repository, and star it.",
     "short_memory_len": 5,
     "max_actions_per_step": 5,
     "max_steps": 100,
