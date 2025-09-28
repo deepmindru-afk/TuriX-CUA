@@ -11,7 +11,7 @@
 Join our Discord community for support, discussions, and updates:
 
 <p align="center">
-   <a href="https://discord.gg/gZXBdkch">
+   <a href="https://discord.gg/BRxXtnGg">
       <img src="https://img.shields.io/discord/1400749393841492020?color=7289da&label=Join%20our%20Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord">
    </a>
 </p>
