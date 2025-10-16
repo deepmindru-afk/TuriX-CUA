@@ -25,7 +25,7 @@ Prefer your own model? **Change in `config.json` and go.**
 
 ## Table of Contents
 - [📞 Contact & Community](#-contact--community)
-- [📰 Latest News](#️-latest-news)
+- [📰 Latest News](#📰-latest-news)
 - [🖼️ Demos](#️-demos)
 - [✨ Key Features](#-key-features)
 - [📊 Model Performance](#-model-performance)
