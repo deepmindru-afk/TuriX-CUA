@@ -1,21 +1,4 @@
 from __future__ import annotations
-
-"""Pydantic models corresponding to the JSON schemas used by the agent pipeline.
-
-Import any of these models and pass them to ``ChatGoogleGenerativeAI.with_structured_output``
-(or ``llm.with_structured_output``) to force Gemini to emit JSON that conforms to the
-specified schema.
-
-Example
--------
->>> from langchain_google_genai import ChatGoogleGenerativeAI
->>> from output_models import AgentStepOutput
->>>
->>> llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-preview-05-06", temperature=0)
->>> structured_llm = llm.with_structured_output(AgentStepOutput)
->>> structured_llm.invoke("Open TextEdit, type 'Hello', then save the file.")
-AgentStepOutput(...)
-"""
 import re
 import json
 from typing import List, Optional, Dict, Any, Union
@@ -74,17 +57,17 @@ class CurrentState(BaseModel):
 class AgentStepOutput(BaseModel):
     """Schema for the agent's per‑step output.
 
+    - ``current_state``: diagnostic information that supervisors/evaluators can use.
     - ``action``: list of actions the agent should perform in order. Multiple actions
       are allowed in a single step.
-    - ``current_state``: diagnostic information that supervisors/evaluators can use.
     """
+    current_state: CurrentState
     action: List[ActionItem] = Field(
         ...,
         min_items=0,
         max_items=10,                     # ← hard limit
         description="Ordered list of 0-10 actions for this step."
     )
-    current_state: CurrentState
 
     def __repr__(self) -> str:
         non_none = self.model_dump(exclude_none=True)
@@ -106,3 +89,6 @@ class AgentStepOutput(BaseModel):
         facilitating direct access to structured data.
         """
         return self.model_dump(exclude_none=True, exclude_unset=True)
+__all__ = [
+    "AgentStepOutput"
+]

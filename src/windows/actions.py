@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from turtle import pos
 from typing import Optional, Dict, Any, Tuple
 import pyautogui
 import win32gui
@@ -29,8 +30,14 @@ class WindowsActions:
         
     async def click(self, x: float, y: float, button: str = 'left') -> bool:
         """Click at specified coordinates"""
-        pos_x = self.getscreen_size()[0] * x
-        pos_y = self.getscreen_size()[1] * y
+        if (0 <= x <= 1 and 0 <= y <= 1):
+            # If the coordinates are normalized (0 to 1)
+            pos_x = self.getscreen_size()[0] * x
+            pos_y = self.getscreen_size()[1] * y
+        else:
+            # If the coordinates are normalized (0 to 1000)
+            pos_x = self.getscreen_size()[0] * (x / 1000)
+            pos_y = self.getscreen_size()[1] * (y / 1000)
         try:
             if button == 'left':
                 pyautogui.click(pos_x, pos_y)
@@ -47,10 +54,18 @@ class WindowsActions:
 
     async def drag(self, start_x: float, start_y: float, end_x: float, end_y: float, duration: float = 0.5) -> bool:
         """Drag from start to end position"""
-        pos_start_x = self.getscreen_size()[0] * start_x
-        pos_start_y = self.getscreen_size()[1] * start_y
-        pos_end_x = self.getscreen_size()[0] * end_x
-        pos_end_y = self.getscreen_size()[1] * end_y
+        if (0<= start_x <= 1 and 0 <= start_y <= 1 and 0 <= end_x <= 1 and 0 <= end_y <= 1):
+            # If the coordinates are normalized (0 to 1)
+            pos_start_x = self.getscreen_size()[0] * start_x
+            pos_start_y = self.getscreen_size()[1] * start_y
+            pos_end_x = self.getscreen_size()[0] * end_x
+            pos_end_y = self.getscreen_size()[1] * end_y
+        else:
+            # If the coordinates are normalized (0 to 1000)
+            pos_start_x = self.getscreen_size()[0] * (start_x / 1000)
+            pos_start_y = self.getscreen_size()[1] * (start_y / 1000)
+            pos_end_x = self.getscreen_size()[0] * (end_x / 1000)
+            pos_end_y = self.getscreen_size()[1] * (end_y / 1000)
         try:
             pyautogui.drag(pos_end_x - pos_start_x, pos_end_y - pos_start_y, duration=duration, button='left')
             return True
@@ -60,8 +75,14 @@ class WindowsActions:
 
     async def scroll(self, x: float, y: float, clicks: int) -> bool:
         """Scroll at specified position"""
-        pos_x = self.getscreen_size()[0] * x
-        pos_y = self.getscreen_size()[1] * y
+        if (0 <= x <= 1 and 0 <= y <= 1):
+            # If the coordinates are normalized (0 to 1)
+            pos_x = self.getscreen_size()[0] * x
+            pos_y = self.getscreen_size()[1] * y
+        else:
+            # If the coordinates are normalized (0 to 1000)
+            pos_x = self.getscreen_size()[0] * (x / 1000)
+            pos_y = self.getscreen_size()[1] * (y / 1000)
         try:
             pyautogui.scroll(clicks, x=pos_x, y=pos_y)
             return True
@@ -164,8 +185,14 @@ class WindowsActions:
 
     async def move_mouse(self, x: float, y: float, duration: float = 0.0) -> bool:
         """Move mouse to specified position"""
-        pos_x = self.getscreen_size()[0] * x
-        pos_y = self.getscreen_size()[1] * y
+        if (0 <= x <= 1 and 0 <= y <= 1):
+            # If the coordinates are normalized (0 to 1)
+            pos_x = self.getscreen_size()[0] * x
+            pos_y = self.getscreen_size()[1] * y
+        else:
+            # If the coordinates are normalized (0 to 1000)
+            pos_x = self.getscreen_size()[0] * (x / 1000)
+            pos_y = self.getscreen_size()[1] * (y / 1000)
         try:
             pyautogui.moveTo(pos_x, pos_y, duration=duration)
             return True

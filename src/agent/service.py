@@ -462,6 +462,7 @@ class Agent:
                     if self.register_done_callback:
                         self.register_done_callback(self.history)
                     break
+                await asyncio.sleep(2)  # Small delay between steps
             else:
                 logger.info('Failed to complete task in maximum steps')
 
