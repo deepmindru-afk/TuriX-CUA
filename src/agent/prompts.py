@@ -5,6 +5,24 @@ from src.agent.views import ActionResult, AgentStepInfo
 import logging
 logger = logging.getLogger(__name__)
 import pyautogui
+import os
+def _get_installed_app_names() -> list[str]:
+    """
+    Returns a list of application names (minus ".app")
+    from both /Applications and /System/Applications
+    """
+    apps = set()
+    for apps_path in ["/Applications", "/System/Applications"]:
+        if os.path.exists(apps_path):
+            for item in os.listdir(apps_path):
+                if item.endswith(".app"):
+                    # e.g. "Safari.app" -> "Safari"
+                    apps.add(item[:-4])
+    return list(apps)
+
+apps = _get_installed_app_names()
+app_list = ', '.join(apps)
+apps_message = f'The available apps in this macbook is: {app_list}'
 
 class SystemPrompt:
     def __init__(
@@ -25,22 +43,21 @@ class SystemPrompt:
 =======================
 
 === GLOBAL INSTRUCTIONS ===
-- **Environment:** macOS 15.  Current time is {self.current_time}.
+- **Environment:** macOS.  Current time is {self.current_time}. The available apps in this macbook is: {app_list}
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
-    "action": [List of all actions to be executed this step],
     "current_state": {{
         "evaluation_previous_goal": "Success/Failed", (From evaluator)
         "next_goal": "Goal of this step based on "actions", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
         "information_stored": "Accumulated important information, add continuously, else 'None'",
     }},
-    
+    "action": [List of all actions to be executed this step]
 }}
 
 *When outputting multiple actions as a list, each action **must** be an object.*
 **DO NOT OUTPUT ACTIONS IF IT IS NONE or Null**
 === ROLE-SPECIFIC DIRECTIVES ===
-- **Role:** *You are a macOS 15 Computer-use Agent.* Execute the user's instructions.
+- **Role:** *You are a macOS Computer-use Agent.* Execute the user's instructions.
 - You will receive a task and a JSON input from the previous step, which contains:
 - Memory  
 - The screenshot  
@@ -52,7 +69,7 @@ class SystemPrompt:
  `{self.action_descriptions}`, For actions that take no parameters (done, wait, record_info) set the value to an empty object *{{}}*
 2. Update **evaluation_previous_goal** based on the current state and previous goal.
 3. If an action fails twice, switch methods.  
-4. **All coordinates are normalized to 0–1. You MUST output normalized positions.**
+4. **All coordinates are normalized to 0–1000. You MUST output normalized positions.**
 
 === DETAILED ACTIONS ===
 Use AppleScript if possible, but *only try once*, if previous step of using Applescript failed, change to other approaches.
@@ -127,22 +144,21 @@ class SystemPrompt_turix:
 =======================
 
 === GLOBAL INSTRUCTIONS ===
-- **Environment:** macOS 15.  Current time is {self.current_time}.
+- **Environment:** macOS.  Current time is {self.current_time}. The available apps in this macbook is: {app_list}
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
-    "action": [List of all actions to be executed this step],
     "current_state": {{
         "evaluation_previous_goal": "Success/Failed", (From evaluator)
         "next_goal": "Goal of this step based on "actions", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
         "information_stored": "Accumulated important information, add continuously, else 'None'",
     }},
-    
+    "action": [List of all actions to be executed this step]  
 }}
 
 *When outputting multiple actions as a list, each action **must** be an object.*
 **DO NOT OUTPUT ACTIONS IF IT IS NONE or Null**
 === ROLE-SPECIFIC DIRECTIVES ===
-- **Role:** *You are a macOS 15 Computer-use Agent.* Execute the user's instructions.
+- **Role:** *You are a macOS Computer-use Agent.* Execute the user's instructions.
 - You will receive a task and a JSON input from the previous step, which contains:
 - Memory  
 - The screenshot  
@@ -152,7 +168,7 @@ class SystemPrompt_turix:
 1. Follow the user's instruction using available actions (DO **NOT** USE TWO SINGLE CLICKS AT THE SAME POSITION, i.e., **NO DOUBLE-CLICK**):  
  `{self.action_descriptions}`, For actions that take no parameters (done, wait, record_info) set the value to an empty object *{{}}*
 2. If an action fails twice, switch methods.  
-3. **All coordinates are normalized to 0–1. You MUST output normalized positions.**
+3. **All coordinates are normalized to 0–1000. You MUST output normalized positions.**
             """
             )
 class AgentMessagePrompt:

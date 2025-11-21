@@ -11,6 +11,21 @@ class OutputSchemas:
     AGENT_SCHEMA = {
         "type": "object",
         "properties": {
+
+            "current_state": {
+                "type": "object",
+                "properties": {
+                    "evaluation_previous_goal": {"type": "string"},
+                    "next_goal": {"type": "string"},
+                    "information_stored": {"type": "string"}
+                },
+                "required": [
+                    "evaluation_previous_goal",
+                    "next_goal",
+                    "information_stored"
+                ]
+            },
+
             "action": {
                 "type": "array",
                 "minItems": 0,
@@ -125,21 +140,7 @@ class OutputSchemas:
                 },
 
                     }
-                },
-
-            "current_state": {
-                "type": "object",
-                "properties": {
-                    "evaluation_previous_goal": {"type": "string"},
-                    "next_goal": {"type": "string"},
-                    "information_stored": {"type": "string"}
-                },
-                "required": [
-                    "evaluation_previous_goal",
-                    "next_goal",
-                    "information_stored"
-                ]
-            }
+                }
         },
         "required": [
             "action",

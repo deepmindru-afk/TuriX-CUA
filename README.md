@@ -223,6 +223,7 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2025 Q3** | **✅ Windows Support** | Cross-platform compatibility bringing TuriX automation to Windows environments *(Now Available)* |
 | **2025 Q3** | **✅ Enhanced MCP Integration** | Deeper Model Context Protocol support for seamless third-party agent connectivity *(Now Available)*|
 | **2025 Q4** | **✅ Next-Gen AI Model** | Significantly improved clicking accuracy and task execution capabilities |
+| **2025 Q4** | **✅ Support Gemini-3-pro model** | Run with any compatible vision language models |
 | **2025 Q4** | **Planner** | Understands user intent and makes step-by-step plans to complete tasks |
 | **2025 Q4** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
 | **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
