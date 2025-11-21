@@ -62,13 +62,13 @@ class AgentStepOutput(BaseModel):
     - ``action``: list of actions the agent should perform in order. Multiple actions
       are allowed in a single step.
     """
+    current_state: CurrentState
     action: List[ActionItem] = Field(
         ...,
         min_items=0,
         max_items=10,
         description="Ordered list of 0-10 actions for this step."
     )
-    current_state: CurrentState
 
     def __repr__(self) -> str:
         non_none = self.model_dump(exclude_none=True)

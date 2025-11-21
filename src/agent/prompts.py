@@ -23,12 +23,12 @@ class SystemPrompt:
 - **Environment:** macOS 15.  Current time is {self.current_time}.
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
-    "action": [List of all actions to be executed this step],
     "current_state": {{
         "evaluation_previous_goal": "Success/Failed", (From evaluator)
         "next_goal": "Goal of this step based on "actions", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
         "information_stored": "Accumulated important information, add continuously, else 'None'",
     }},
+    "action": [List of all actions to be executed this step],
     
 }}
 
@@ -47,7 +47,7 @@ class SystemPrompt:
  `{self.action_descriptions}`, For actions that take no parameters (done, wait, record_info) set the value to an empty object *{{}}*
 2. Update **evaluation_previous_goal** based on the current state and previous goal.
 3. If an action fails twice, switch methods.  
-4. **All coordinates are normalized to 0–1. You MUST output normalized positions.**
+4. **All coordinates are normalized to 0–1000. You MUST output normalized positions.**
 
 === DETAILED ACTIONS ===
 Use AppleScript if possible, but *only try once*, if previous step of using Applescript failed, change to other approaches.
@@ -123,12 +123,12 @@ class SystemPrompt_turix:
 - **Environment:** macOS 15.  Current time is {self.current_time}.
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
-    "action": [List of all actions to be executed this step],
     "current_state": {{
         "evaluation_previous_goal": "Success/Failed", (From evaluator)
         "next_goal": "Goal of this step based on "actions", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
         "information_stored": "Accumulated important information, add continuously, else 'None'",
     }},
+    "action": [List of all actions to be executed this step],
     
 }}
 
@@ -145,7 +145,7 @@ class SystemPrompt_turix:
 1. Follow the user's instruction using available actions (DO **NOT** USE TWO SINGLE CLICKS AT THE SAME POSITION, i.e., **NO DOUBLE-CLICK**):  
  `{self.action_descriptions}`, For actions that take no parameters (done, wait, record_info) set the value to an empty object *{{}}*
 2. If an action fails twice, switch methods.  
-3. **All coordinates are normalized to 0–1. You MUST output normalized positions.**
+3. **All coordinates are normalized to 0–1000. You MUST output normalized positions.**
             """
             )
 class AgentMessagePrompt:

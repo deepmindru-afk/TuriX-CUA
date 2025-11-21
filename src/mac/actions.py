@@ -3,21 +3,26 @@ import Quartz
 import asyncio
 import time
 from Quartz.CoreGraphics import *
+# We keep PyAutoGUI references for keyboard presses/hotkeys if desired,
+# but remove it for mouse actions to avoid moving the cursor visually.
 import pyautogui  
 import Quartz, CoreFoundation as CF
 from ApplicationServices import (
-    NSWindow,
-    NSBorderlessWindowMask,
-    NSBackingStoreBuffered,
-    NSColor,
-    NSTimer
+    NSWindow, NSBorderlessWindowMask, NSBackingStoreBuffered,
+    NSColor, NSTimer
 )
 from pynput.keyboard import Controller
 from typing import Optional
+from src.mac.element import MacElementNode
 
 logger = logging.getLogger(__name__)
 
 kb = Controller()
+
+
+# ------------------------------------------------
+# HELPER FUNCTIONS
+# ------------------------------------------------
 
 def _get_screen_size():
     """Return (width, height) of the main display in pixels."""
@@ -28,6 +33,9 @@ def _get_screen_size():
 
 def _get_current_mouse_position():
     """Return the current mouse cursor position as a (x, y) tuple in absolute pixels."""
+    # event = Quartz.CGEventCreate(None)
+    # return Quartz.CGEventGetLocation(event)
+    # Get the curren location with pyautogui
     pos = pyautogui.position()
     return (pos[0], pos[1])
 
@@ -50,8 +58,9 @@ def _post_mouse_event(x, y, event_type, button):
 
 async def flash_click_highlight(x, y, radius=16, duration=1.0):
     screen_width, screen_height = pyautogui.size()
-    y = screen_height - y 
+    y = screen_height - y  # Convert to Quartz's coordinate system
     """Red ring for <duration>s; returns immediately (no seg-fault)."""
+    # -- create overlay window ------------------------------------------------
     frame = Quartz.CGRectMake(x - radius, y - radius, radius*2, radius*2)
     win   = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
               frame, NSBorderlessWindowMask, NSBackingStoreBuffered, False)
@@ -68,10 +77,14 @@ async def flash_click_highlight(x, y, radius=16, duration=1.0):
     layer.setBorderColor_(Quartz.CGColorCreateGenericRGB(1, 0, 0, 1))
     win.contentView().layer().addSublayer_(layer)
     win.orderFrontRegardless()
+
+    # -- schedule dismissal ---------------------------------------------------
     NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
         duration,      win, "orderOut:", None, False)
     NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
         duration + .05, win, "close",     None, False)
+
+    # -- pulse Cocoa’s run-loop just long enough for the timer to fire --------
     CF.CFRunLoopRunInMode(Quartz.kCFRunLoopDefaultMode, duration + .1, False)
 
 async def _click_invisible(x, y, button='left'):
@@ -80,6 +93,7 @@ async def _click_invisible(x, y, button='left'):
     the cursor there. The pointer returns to its old position.
     `button` can be 'left' or 'right'.
     """
+    # Create a async thread to run the flash highlight
     asyncio.create_task(flash_click_highlight(x, y))
 
     if button == 'left':
@@ -91,6 +105,9 @@ async def _click_invisible(x, y, button='left'):
         up_type   = Quartz.kCGEventRightMouseUp
         cg_button = Quartz.kCGMouseButtonRight
 
+    old_pos = _get_current_mouse_position()  # Save where the user cursor was
+    # try:
+    # Press down
     move = Quartz.CGEventCreateMouseEvent(None,
                                       Quartz.kCGEventMouseMoved,
                                       (x, y), cg_button)
@@ -100,10 +117,11 @@ async def _click_invisible(x, y, button='left'):
     event_down = Quartz.CGEventCreateMouseEvent(None, down_type, (x, y), cg_button)
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event_down)
     
+    # Release
     event_up = Quartz.CGEventCreateMouseEvent(None, up_type, (x, y), cg_button)
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event_up)
-
-async def _drag_invisible(x1, y1, x2, y2, duration=0.5, steps=60):
+    
+async def _drag_invisible(x1, y1, x2, y2, duration=0.5, steps=60, button='left'):
     src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState)
 
     down = CGEventCreateMouseEvent(src,
@@ -124,7 +142,7 @@ async def _drag_invisible(x1, y1, x2, y2, duration=0.5, steps=60):
                                        kCGMouseButtonLeft)
         CGEventSetIntegerValueField(drag,
                                     kCGMouseEventClickState, 1)
-        CGEventSetTimestamp(drag, int(time.time_ns()))
+        CGEventSetTimestamp(drag, int(time.time_ns()))   # 15+ 必填
         CGEventPost(kCGHIDEventTap, drag)
         await asyncio.sleep(step_t)
 
@@ -142,10 +160,11 @@ async def _scroll_invisible(lines=1):
         event = Quartz.CGEventCreateScrollWheelEvent(
             None,
             Quartz.kCGScrollEventUnitLine,
-            1,
-            direction 
+            1,              # 只滚纵向
+            direction       # ±1 而不是 ±N
         )
         Quartz.CGEventPost(Quartz.kCGSessionEventTap, event)
+        # 3–10 ms 让目标 App 处理，太快可能丢
         await asyncio.sleep(0.003)
         if _==25:
             break
@@ -156,6 +175,8 @@ async def _scroll_invisible_at_position(x, y, lines):
     (positive=up, negative=down), then warp back. 
     This avoids permanently moving the user's pointer.
     """
+    x = x/1000.0
+    y = y/1000.0
     screen_w, screen_h = _get_screen_size()
     x *= screen_w
     y *= screen_h
@@ -163,11 +184,19 @@ async def _scroll_invisible_at_position(x, y, lines):
     await _scroll_invisible(lines)
     return True
 
+# -----------------------------------------------
+# MOUSE ACTIONS (now using Quartz, invisible)
+# ------------------------------------------------
+
 async def left_click_pixel(position) -> bool:
     """Left-click the specified (x, y) in normalized screen coords, invisibly."""
     screen_w, screen_h = _get_screen_size()
-    abs_x = position[0] * screen_w
-    abs_y = position[1] * screen_h
+    if position[0] > 1 and position[1] > 1:
+        abs_x = position[0]/1000 * screen_w
+        abs_y = position[1]/1000 * screen_h
+    else:
+        abs_x = position[0] * screen_w
+        abs_y = position[1] * screen_h
 
     await _click_invisible(abs_x, abs_y, button='left')
     logger.debug(f'✅ Successfully left-clicked pixel at absolute [{abs_x}, {abs_y}]')
@@ -176,8 +205,12 @@ async def left_click_pixel(position) -> bool:
 async def right_click_pixel(position) -> bool:
     """Right-click the specified (x, y) in normalized screen coords, invisibly."""
     screen_w, screen_h = _get_screen_size()
-    abs_x = position[0] * screen_w
-    abs_y = position[1] * screen_h
+    if position[0] > 1 and position[1] > 1:
+        abs_x = position[0]/1000 * screen_w
+        abs_y = position[1]/1000 * screen_h
+    else:
+        abs_x = position[0] * screen_w
+        abs_y = position[1] * screen_h
 
     await _click_invisible(abs_x, abs_y, button='right')
     logger.debug(f'✅ Successfully right-clicked pixel at absolute [{abs_x}, {abs_y}]')
@@ -191,9 +224,14 @@ async def move_to(position) -> bool:
     post mouse events at the target coords directly.
     """
     screen_w, screen_h = _get_screen_size()
-    abs_x = position[0] * screen_w
-    abs_y = position[1] * screen_h
+    if position[0] > 1 and position[1] > 1:
+        abs_x = position[0]/1000 * screen_w
+        abs_y = position[1]/1000 * screen_h
+    else:
+        abs_x = position[0] * screen_w
+        abs_y = position[1] * screen_h
 
+    # _warp_cursor((abs_x, abs_y))
     move = Quartz.CGEventCreateMouseEvent(None,
                                       Quartz.kCGEventMouseMoved,
                                       (abs_x, abs_y), Quartz.kCGMouseButtonLeft)
@@ -208,14 +246,20 @@ async def drag_pixel(start, end) -> bool:
     This uses left-mouse drag invisibly, restoring cursor after the operation.
     """
     screen_w, screen_h = _get_screen_size()
-    x1 = start[0] * screen_w
-    y1 = start[1] * screen_h
-    x2 = end[0] * screen_w
-    y2 = end[1] * screen_h
-
-    await _drag_invisible(x1, y1, x2, y2)
+    if start[0] > 1 and start[1] > 1 and end[0] > 1 and end[1] > 1:
+        x1 = start[0]/1000 * screen_w
+        y1 = start[1]/1000 * screen_h
+        x2 = end[0]/1000 * screen_w
+        y2 = end[1]/1000 * screen_h
+    else:
+        x1 = start[0] * screen_w
+        y1 = start[1] * screen_h
+        x2 = end[0] * screen_w
+        y2 = end[1] * screen_h
+    await _drag_invisible(x1, y1, x2, y2, button='left')
     logger.debug(f'✅ Successfully dragged from [{x1}, {y1}] to [{x2}, {y2}]')
     return True
+
 
 async def press(key: str = "enter") -> bool:
     """
