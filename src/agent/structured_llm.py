@@ -49,8 +49,7 @@ class Analysis(BaseModel):
 
 class CurrentState(BaseModel):
     evaluation_previous_goal: str = Field(..., description="Success/Failed (based on step completion)")
-    ask_for_help: str = Field(..., description="Yes/No (Yes if agent is stuck in a loop or replan is needed)")
-    ask_user: str = Field(..., description="Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)")
+    ask_human: str = Field(..., description="Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)")
     next_goal: str = Field(..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP")
 
 

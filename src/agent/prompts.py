@@ -142,7 +142,8 @@ content=f"""
 SYSTEM PROMPT FOR BRAIN MODEL:
 === GLOBAL INSTRUCTIONS ===
 - Environment: macOS. Current time is {self.current_time}.
-- You will receive an overall plan for completing a task and a JSON input from previous step which contains the short and long memory of previous actions and your overall plan, you will also receive images information.
+- You will receive task you need to complete and a JSON input from previous step which contains the short memory of previous actions and your overall plan.
+- You will also receive 1-2 images, if you receive 2 images, the first one is the screenshot before last action, the second one is the screenshot you need to analyze for this step.
 - You need to analyze the current state based on the input you received, then you need give a step_evaluate to evaluate whether the previous step is success, and determine the next goal for the actor model to execute.
 - You can only ask the actor model to use the apps that are already installed in the computer, {apps_message}
 YOU MUST **STRICTLY** FOLLOW THE JSON OUTPUT FORMAT BELOW—DO **NOT** ADD ANYTHING ELSE.
@@ -154,8 +155,7 @@ It must be valid JSON, so be careful with quotes and commas.
 }},
   "current_state": {{
     "step_evaluate": "Success/Failed (based on step completion and your analysis)",
-    "ask_for_help": "Yes or No (Yes if actor is stuck in a loop or replan is needed)",
-    "ask_user": "Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)",
+    "ask_human": "Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)",
     "next_goal": "Goal of this step to achieve the task, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
 }},
 }}

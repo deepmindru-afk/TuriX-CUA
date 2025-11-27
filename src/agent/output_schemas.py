@@ -151,14 +151,12 @@ class OutputSchemas:
                 "type": "object",
                 "properties": {
                     "step_evaluate": {"type": "string"},
-                    "ask_for_help": {"type": "string"},
-                    "ask_user": {"type": "string"},
+                    "ask_human": {"type": "string"},
                     "next_goal": {"type": "string"}
                 },
                 "required": [
                     "step_evaluate",
-                    "ask_for_help",
-                    "ask_user",
+                    "ask_human",
                     "next_goal",
                 ]
             },

@@ -23,7 +23,6 @@ from langchain_core.messages import (
 )
 
 from lmnr import observe
-from datetime import datetime
 from openai import RateLimitError
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, ValidationError
@@ -31,7 +30,6 @@ from src.agent.message_manager.service import MessageManager
 from src.agent.prompts import (
     BrainPrompt_turix,
     ActorPrompt_turix,
-    SystemPrompt,
 )
 from src.agent.views import (
     ActionResult,
@@ -59,21 +57,6 @@ def screenshot_to_dataurl(screenshot):
     screenshot.save(img_byte_arr, format='PNG')
     base64_encoded = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
     return f'data:image/png;base64,{base64_encoded}'
-
-def _get_installed_app_names() -> list[str]:
-    """
-    Returns a list of application names (minus ".app") 
-    from both /Applications and /System/Applications
-    """
-    apps = set()
-    for apps_path in ["/Applications", "/System/Applications"]:
-        if os.path.exists(apps_path):
-            for item in os.listdir(apps_path):
-                if item.endswith(".app"):
-                    # e.g. "Safari.app" -> "Safari"
-                    apps.add(item[:-4])
-    return list(apps)
-
 
 def to_structured(llm: BaseChatModel, Schema, Structured_Output) -> BaseChatModel:
     """
@@ -266,8 +249,80 @@ class Agent:
                 self.n_steps = data.get("step", 1)
                 logger.info(f"Loaded memory from {file_name}")
 
-    @time_execution_async("--step")
-    async def step(self, step_info: Optional[AgentStepInfo] = None) -> None:
+    @time_execution_async('--brain_step')
+    async def brain_step(self,) -> dict:
+        step_id = self.n_steps
+        prev_step_id = step_id - 1
+        try:
+            self.previous_screenshot = self.screenshot_annotated
+            screenshot = self.mac_tree_builder.capture_screenshot()
+            self.screenshot_annotated = screenshot
+            screenshot.save(f'images/screenshot_{self.n_steps}.png')
+            current_screenshot_path = f'images/screenshot_{self.n_steps}.png'
+            if self.screenshot_annotated:
+                screenshot_dataurl = screenshot_to_dataurl(self.screenshot_annotated)
+            if self.previous_screenshot:
+                previous_screenshot_dataurl = screenshot_to_dataurl(self.previous_screenshot)
+            # Build content for state message
+            if step_id >= 2:
+                state_content = [
+                    {
+                        "type": "text",
+                        "content": (
+                            f"Previous step is {prev_step_id}.\n\n"
+                            f"Actions take by actor last step:\n{self.last_step_action}\n\n"
+                            f"Previous Actions Short History:\n{self.short_memory}\n\n"
+                            f"Necessary information remembered is:\n{self.infor_memory}\n\n"
+                            "Please provide a JSON with correct format: "
+                        )
+                    }
+                ]
+                if previous_screenshot_dataurl:
+                    state_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": previous_screenshot_dataurl},
+                    })
+                if screenshot_dataurl:
+                    state_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": screenshot_dataurl},
+                    })
+            else:
+                state_content = [
+                    {
+                        "type": "text",
+                        "content": (
+                            f"This is the first step.\n\n"
+                            f"You should provide a JSON with a well-defined goal based on images information. The other fields should be default value."
+                        )
+                    }
+                ]
+                if screenshot_dataurl:
+                    state_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": screenshot_dataurl},
+                    })
+            
+            self.brain_message_manager._remove_last_state_message()
+            self.brain_message_manager._remove_last_AIntool_message()
+            self.brain_message_manager.add_state_message(state_content)
+            brain_messages = self.brain_message_manager.get_messages()
+            
+            response = await self.brain_llm.ainvoke(brain_messages)
+            brain_text = str(response.content)
+            cleaned_brain_response = re.sub(r"^```(json)?", "", brain_text.strip())
+            cleaned_brain_response = re.sub(r"```$", "", cleaned_brain_response).strip()
+            logger.debug(f"[Brain] Raw text: {cleaned_brain_response}")
+            parsed = json.loads(cleaned_brain_response)
+            self.next_goal = parsed['current_state']['next_goal']
+            self.current_state = parsed['current_state']
+
+        except Exception as e:
+            logger.exception("[Brain] Unexpected error in brain_step.")
+            return {"Brain_text": {"step_evaluate": "unknown", "reason": str(e)}}
+
+    @time_execution_async("--actor_step")
+    async def actor_step(self, step_info: Optional[AgentStepInfo] = None) -> None:
         logger.info(f"\n📍 Step {self.n_steps}")
         state = "No UI state available"  # Default value
         model_output = None
@@ -282,14 +337,9 @@ class Agent:
             if self.use_ui:
                 self.last_pid = self.get_last_pid()
                 root = await self.mac_tree_builder.build_tree(self.last_pid)
-            # if root and self.use_ui:
                 state = root._get_visible_clickable_elements_string() if root else "No UI tree found."
             else:
                 state = ''
-            if self.n_steps == 1:
-                apps = _get_installed_app_names()
-                app_list = ', '.join(apps)
-                state = f'The available apps in this macbook is: {app_list}'
             self.save_memory()
             
             # ---------------------------
@@ -322,8 +372,8 @@ class Agent:
                     state_content = [
                         {
                             "type": "text",
-                            "content": f"The previous action is evaluated to be successful.\n\n Saved information memory: {self.infor_memory}\n\n"
-                            f"{self.short_memory}"
+                            "content": f"Saved information memory: {self.infor_memory}\n\n"
+                            f"memory fot recent step:{self.short_memory}"
                         },
                         {
                             "type": "image_url",
