@@ -92,8 +92,10 @@ class Agent:
         short_memory_len : int,
         controller: Controller = Controller(),
         use_ui = False,
-        save_conversation_path: Optional[str] = None,
-        save_conversation_path_encoding: Optional[str] = 'utf-8',
+        save_brain_conversation_path: Optional[str] = None,
+        save_brain_conversation_path_encoding: Optional[str] = 'utf-8',
+        save_actor_conversation_path: Optional[str] = None,
+        save_actor_conversation_path_encoding: Optional[str] = 'utf-8',
         max_failures: int = 5,
         retry_delay: int = 10,
         max_input_tokens: int = 32000,
@@ -125,8 +127,11 @@ class Agent:
         self.brain_llm = to_structured(brain_llm, OutputSchemas.BRAIN_RESPONSE_FORMAT, BrainOutput)
         self.actor_llm = to_structured(actor_llm, OutputSchemas.ACTION_RESPONSE_FORMAT, ActorOutput)
 
-        self.save_conversation_path = save_conversation_path
-        self.save_conversation_path_encoding = save_conversation_path_encoding
+        self.save_actor_conversation_path = save_actor_conversation_path
+        self.save_actor_conversation_path_encoding = save_actor_conversation_path_encoding
+
+        self.save_brain_conversation_path = save_brain_conversation_path
+        self.save_brain_conversation_path_encoding = save_brain_conversation_path_encoding
 
         self.include_attributes = include_attributes
         self.max_error_length = max_error_length
@@ -168,8 +173,6 @@ class Agent:
         self.infor_memory = []
         self.last_pid = None
         self.ask_for_help = False
-        if save_conversation_path:
-            logger.info(f'Saving conversation to {save_conversation_path}')
 
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
@@ -218,6 +221,8 @@ class Agent:
         data = {
             "pid": self.get_last_pid(),
             "task": self.task,
+            "next_goal": self.next_goal,
+            "last_step_action": self.last_step_action,
             "short_memory": self.short_memory,
             "infor_memory": self.infor_memory,
             "state_memory": self.state_memory,
@@ -225,7 +230,7 @@ class Agent:
         }
         file_name = os.path.join(self.save_temp_file_path, f"memory.jsonl")
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
-        with open(file_name, "w", encoding=self.save_conversation_path_encoding) as f:
+        with open(file_name, "w", encoding=self.save_brain_conversation_path_encoding) as f:
             if os.path.getsize(file_name) > 0:
                 f.truncate(0)
             f.write(json.dumps(data, ensure_ascii=False, default=lambda o: list(o) if isinstance(o, set) else o) + "\n")
@@ -238,14 +243,17 @@ class Agent:
             return
         file_name = os.path.join(self.save_temp_file_path, f".jsonl")
         if os.path.exists(file_name):
-            with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
+            with open(file_name, "r", encoding=self.save_brain_conversation_path_encoding) as f:
                 lines = f.readlines()
             if len(lines) >= 1:
                 data = json.loads(lines[-1])
+                self.task = data.get("task", "")
                 self.last_pid = data.get("pid", None)
                 self.short_memory = data.get("short_memory", [])
                 self.infor_memory = data.get("infor_memory", [])
                 self.state_memory = data.get("state_memory", None)
+                self.last_step_action = data.get("last_step_action", None)
+                self.next_goal = data.get("next_goal", "")
                 self.n_steps = data.get("step", 1)
                 logger.info(f"Loaded memory from {file_name}")
 
@@ -315,6 +323,8 @@ class Agent:
             cleaned_brain_response = re.sub(r"```$", "", cleaned_brain_response).strip()
             logger.debug(f"[Brain] Raw text: {cleaned_brain_response}")
             parsed = json.loads(cleaned_brain_response)
+
+            self._save_brain_conversation(brain_messages, parsed, step=self.n_steps)
             self.next_goal = parsed['current_state']['next_goal']
             self.current_state = parsed['current_state']
 
@@ -385,13 +395,13 @@ class Agent:
             self.actor_message_manager._remove_last_state_message()
             self.actor_message_manager.add_state_message(state_content, self._last_result, step_info)
             
-            input_messages = self.actor_message_manager.get_messages()
-            model_output, raw = await self.get_next_action(input_messages)
+            actor_messages = self.actor_message_manager.get_messages()
+            model_output, raw = await self.get_next_action(actor_messages)
 
             self.last_goal = self.next_goal
             if self.register_new_step_callback:
                 self.register_new_step_callback(state, model_output, self.n_steps)
-            self._save_agent_conversation(input_messages, model_output, step=self.n_steps)
+            self._save_actor_conversation(actor_messages, model_output, step=self.n_steps)
 
             self.actor_message_manager._remove_last_state_message()
             self.actor_message_manager.add_model_output(model_output)
@@ -510,31 +520,56 @@ class Agent:
         logger.info(f'🎯 Goal to achieve this step: {self.next_goal}')
         for i, action in enumerate(response.action):
             logger.info(f'🛠️  Action {i + 1}/{len(response.action)}: {action.model_dump_json(exclude_unset=True)}')
-
-    def _save_agent_conversation(
+    
+    def _save_brain_conversation(
         self,
         input_messages: list[BaseMessage],
         response: Any,
         step: int
     ) -> None:
         """
-        Write all the agent conversation (input messages + final AgentOutput)
-        into a file: e.g. "agent_conversation_{step}.txt"
+        Write all the Brain agent conversation (input messages + final AgentOutput)
+        into a file: e.g. "brain_conversation_{step}.txt"
         """
         # If you do NOT want to save or no path provided, skip
-        if not self.save_conversation_path:
+        if not self.save_brain_conversation_path:
             return
-        file_name = f"{self.save_conversation_path}_agent_{step}.txt"
+        file_name = f"{self.save_brain_conversation_path}_brain_{step}.txt"
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
 
-        with open(file_name, "w", encoding=self.save_conversation_path_encoding) as f:
+        with open(file_name, "w", encoding=self.save_brain_conversation_path_encoding) as f:
             # 1) Write input messages
             self._write_messages_to_file(f, input_messages)
             # 2) Write the final agent "response" (AgentOutput)
             if response is not None:
                 self._write_response_to_file(f, response)
 
-        logger.info(f"Agent conversation saved to: {file_name}")
+        logger.info(f"Brain conversation saved to: {file_name}")
+
+    def _save_actor_conversation(
+        self,
+        input_messages: list[BaseMessage],
+        response: Any,
+        step: int
+    ) -> None:
+        """
+        Write all the Actor agent conversation (input messages + final AgentOutput)
+        into a file: e.g. "actor_conversation_{step}.txt"
+        """
+        # If you do NOT want to save or no path provided, skip
+        if not self.save_actor_conversation_path:
+            return
+        file_name = f"{self.save_actor_conversation_path}_actor_{step}.txt"
+        os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
+
+        with open(file_name, "w", encoding=self.save_actor_conversation_path_encoding) as f:
+            # 1) Write input messages
+            self._write_messages_to_file(f, input_messages)
+            # 2) Write the final agent "response" (AgentOutput)
+            if response is not None:
+                self._write_response_to_file(f, response)
+
+        logger.info(f"Actor conversation saved to: {file_name}")
 
     def _write_messages_to_file(self, f: Any, messages: list[BaseMessage]) -> None:
         """

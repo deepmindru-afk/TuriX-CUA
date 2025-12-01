@@ -15,7 +15,9 @@
     "max_actions_per_step": 5,
     "max_steps": 100,
     "use_turix": true,
-    "save_conversation_path": "llm_interactions.log",
-    "save_conversation_path_encoding": "utf-8"
+    "save_brain_conversation_path": "brain_llm_interactions.log",
+    "save_actor_conversation_path": "actor_llm_interactions.log",
+    "save_actor_conversation_path_encoding": "utf-8",
+    "save_brain_conversation_path_encoding": "utf-8"
   }
 }

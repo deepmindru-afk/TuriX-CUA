@@ -123,8 +123,10 @@ def main(config_path: str = "config.json"):
         controller              = controller,
         use_ui                  = agent_cfg.get("use_ui", False),
         max_actions_per_step    = agent_cfg.get("max_actions_per_step", 5),
-        save_conversation_path  = agent_cfg.get("save_conversation_path"),
-        save_conversation_path_encoding = agent_cfg.get("save_conversation_path_encoding", "utf-8"),
+        save_brain_conversation_path  = agent_cfg.get("save_brain_conversation_path"),
+        save_brain_conversation_path_encoding = agent_cfg.get("save_brain_conversation_path_encoding", "utf-8"),
+        save_actor_conversation_path  = agent_cfg.get("save_actor_conversation_path"),
+        save_actor_conversation_path_encoding = agent_cfg.get("save_actor_conversation_path_encoding", "utf-8")
     )
 
     async def runner():
