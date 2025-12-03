@@ -31,7 +31,7 @@ Prefer your own model? **Change in `config.json` and go.**
 - [🖼️ Demos](#️-demos)
 - [✨ Key Features](#-key-features)
 - [📊 Model Performance](#-model-performance)
-- [🚀 Quick‑Start (Windows)](#-quick-start-windos)
+- [🚀 Quick‑Start (Windows)](#-quickstart-windows)
    - [1. Download the App](#1-download-the-app)
    - [2. Create a Python 3.12 Environment](#2-create-a-python-312-environment)
    - [3. Configure & Run](#3-configure--run)
