@@ -11,7 +11,7 @@
 Join our Discord community for support, discussions, and updates:
 
 <p align="center">
-   <a href="https://discord.gg/vkEYj4EV2n">
+   <a href="https://discord.gg/yaYrNAckb5">
       <img src="https://img.shields.io/discord/1400749393841492020?color=7289da&label=Join%20our%20Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord">
    </a>
 </p>
@@ -25,6 +25,7 @@ Prefer your own model? **Change in `config.json` and go.**
 
 ## Table of Contents
 - [📞 Contact & Community](#-contact--community)
+- [📰 Latest News](#-latest-news)
 - [🖼️ Demos](#️-demos)
 - [✨ Key Features](#-key-features)
 - [📊 Model Performance](#-model-performance)
@@ -35,10 +36,20 @@ Prefer your own model? **Change in `config.json` and go.**
       - [3.1 Accessibility](#31-accessibility)
       - [3.2 Safari Automation](#32-safari-automation)
    - [4. Configure & Run](#4-configure--run)
-   - [5. MCP Support](#5-mcp-support)
 - [🤝 Contributing](#-contributing)
 - [🗺️ Roadmap](#️-roadmap)
 
+---
+
+## 📰 Latest News
+
+**September 30, 2025** - 🎉 Exciting update! We've just released our latest AI model on the [TuriX API platform](https://turixapi.io), bringing enhanced performance, smarter reasoning, and seamless integration for even more powerful desktop automation. Developers and researchers, this is your cue—head over to the platform to access it now and elevate your workflows!
+
+**October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across both **macOS** and **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
+
+Ready to level up? Update your `config.json` and start automating—happy hacking! 🎉
+
+*Stay tuned to our [Discord](https://discord.gg/vkEYj4EV2n) for tips, user stories, and the next big drop.*
 
 ---
 
@@ -167,7 +178,7 @@ Edit API in `examples/config.json`:
 "llm": {
       "provider": "turix",
       "api_key": "YOUR_API_KEY",
-      "base_url": "YOUR_BASE_URL"
+      "base_url": "https://llm.turixapi.io/v1"
    }
 ```
 
@@ -238,11 +249,12 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 |---------|---------|-------------|
 | **2025 Q3** | **✅ Windows Support** | Cross-platform compatibility bringing TuriX automation to Windows environments *(Now Available)* |
 | **2025 Q3** | **✅ Enhanced MCP Integration** | Deeper Model Context Protocol support for seamless third-party agent connectivity *(Now Available)*|
-| **2025 Q4** | **✅ Next-Gen AI Model** | Significantly improved reasoning and task execution capabilities |
+| **2025 Q4** | **✅ Next-Gen AI Model** | Significantly improved clicking accuracy and task execution capabilities |
 | **2025 Q4** | **✅ Support Gemini-3-pro model** | Run with any compatible vision language models |
 | **2025 Q4** | **Planner** | Understands user intent and makes step-by-step plans to complete tasks |
+| **2025 Q4** | **Multi-Agent Architecture** | Evaluate and guide each step in working |
 | **2025 Q4** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
 | **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
-| **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
+| **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms
