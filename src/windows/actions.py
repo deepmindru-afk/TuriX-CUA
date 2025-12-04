@@ -134,23 +134,111 @@ class WindowsActions:
     #     except Exception as e:
     #         logger.error(f"Error typing text '{text}': {e}")
     #         return False
+    # async def type_text(self, text: str) -> bool:
+    #     """使用SendMessage直接发送文本到窗口"""
+    #     hwnd = win32gui.GetForegroundWindow()
+    #     try:
+    #         if not hwnd or not win32gui.IsWindow(hwnd):
+    #             return False
+            
+    #         edit_hwnd = win32gui.FindWindowEx(hwnd, 0, "Edit", None)
+    #         if edit_hwnd:
+    #             win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, "")
+    #             win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
+    #             return True
+            
+    #         for char in text:
+    #             win32gui.SendMessage(hwnd, win32con.WM_CHAR, ord(char), 0)
+    #             await asyncio.sleep(0.01)  
+            
+    #         return True
+            
+    #     except Exception as e:
+    #         logger.error(f"SendMessage输入失败: {e}")
+    #         return False
     async def type_text(self, text: str) -> bool:
         """使用SendMessage直接发送文本到窗口"""
         hwnd = win32gui.GetForegroundWindow()
         try:
             if not hwnd or not win32gui.IsWindow(hwnd):
+                logger.warning(f"无效的窗口句柄: {hwnd}")
                 return False
             
+            logger.info(f"目标窗口: {win32gui.GetWindowText(hwnd)} (句柄: {hwnd})")
+            
+            # ========== 方案1：尝试找到Edit控件直接设置文本 ==========
             edit_hwnd = win32gui.FindWindowEx(hwnd, 0, "Edit", None)
             if edit_hwnd:
-                win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, "")
-                win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
-                return True
+                logger.info(f"找到Edit控件: {edit_hwnd}")
+                
+                # 先激活窗口
+                win32gui.SetForegroundWindow(hwnd)
+                await asyncio.sleep(0.1)
+                
+                # 方法1：直接设置文本
+                try:
+                    # 先清空
+                    win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, "")
+                    await asyncio.sleep(0.01)
+                    # 设置新文本
+                    result = win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
+                    logger.info(f"设置Edit文本成功，返回值: {result}")
+                    return True
+                except Exception as e:
+                    logger.warning(f"直接设置Edit文本失败: {e}")
+                    # 继续尝试其他方法
             
+            # ========== 方案2：查找所有可能的编辑控件 ==========
+            # 不同的应用程序可能使用不同的控件类名
+            edit_classes = ["Edit", "RichEdit", "RichEdit20W", "RICHEDIT50W", 
+                        "TextBox", "WindowsForms10.EDIT", "TEdit"]
+            
+            for edit_class in edit_classes:
+                try:
+                    edit_hwnd = win32gui.FindWindowEx(hwnd, 0, edit_class, None)
+                    if edit_hwnd:
+                        logger.info(f"找到{edit_class}控件: {edit_hwnd}")
+                        
+                        # 先激活窗口
+                        win32gui.SetForegroundWindow(hwnd)
+                        await asyncio.sleep(0.1)
+                        
+                        # 发送WM_SETTEXT
+                        win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, "")
+                        win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
+                        logger.info(f"通过{edit_class}设置文本成功")
+                        return True
+                except:
+                    continue
+            
+            # ========== 方案3：通过Tab键切换到输入控件 ==========
+            logger.info("未找到标准编辑控件，尝试模拟按键输入")
+            
+            # 确保窗口激活
+            win32gui.SetForegroundWindow(hwnd)
+            await asyncio.sleep(0.2)
+            
+            # 先按Tab键尝试切换到输入框
+            pyautogui.press('tab')
+            await asyncio.sleep(0.05)
+            
+            # 尝试发送字符
             for char in text:
-                win32gui.SendMessage(hwnd, win32con.WM_CHAR, ord(char), 0)
-                await asyncio.sleep(0.01)  
+                try:
+                    # 发送到窗口
+                    win32gui.SendMessage(hwnd, win32con.WM_CHAR, ord(char), 0)
+                except:
+                    # 备用方案：使用keybd_event
+                    if char == '\n':  # 回车
+                        pyautogui.press('enter')
+                    elif char == '\t':  # 制表符
+                        pyautogui.press('tab')
+                    else:
+                        pyautogui.write(char)
+                
+                await asyncio.sleep(0.01)  # 小延迟避免太快
             
+            logger.info(f"通过WM_CHAR发送文本完成: {text[:50]}...")
             return True
             
         except Exception as e:
