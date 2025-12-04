@@ -98,37 +98,58 @@ class WindowsActions:
         try:
             if not text:
                 return True
-                
-            # Save current clipboard content
+            
+            # Save current clipboard content with retries
             original_clipboard = None
-            try:
-                win32clipboard.OpenClipboard()
-                if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
-                    original_clipboard = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                win32clipboard.CloseClipboard()
-            except:
-                pass
+            for attempt in range(3):  # Retry up to 3 times
+                try:
+                    win32clipboard.OpenClipboard()
+                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                        original_clipboard = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+                    win32clipboard.CloseClipboard()
+                    break
+                except Exception as e:
+                    logger.warning(f"Attempt {attempt+1}: Failed to save original clipboard: {e}")
+                    await asyncio.sleep(0.1 * (attempt + 1))  # Exponential backoff
+            else:
+                logger.error("Failed to save original clipboard after retries")
+                return False
             
-            # Set text to clipboard
-            win32clipboard.OpenClipboard()
-            win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
-            win32clipboard.CloseClipboard()
-            
-            # Paste using Ctrl+V
-            await asyncio.sleep(0.05)  # Small delay
-            pyautogui.hotkey('ctrl', 'v')
-            await asyncio.sleep(0.1)  # Wait for paste to complete
-            
-            # Restore original clipboard content
-            if original_clipboard is not None:
+            # Set text to clipboard with retries
+            for attempt in range(3):
                 try:
                     win32clipboard.OpenClipboard()
                     win32clipboard.EmptyClipboard()
-                    win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, original_clipboard)
+                    win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
                     win32clipboard.CloseClipboard()
-                except:
-                    pass
+                    break
+                except Exception as e:
+                    logger.warning(f"Attempt {attempt+1}: Failed to set clipboard: {e}")
+                    await asyncio.sleep(0.1 * (attempt + 1))
+            else:
+                logger.error("Failed to set clipboard after retries")
+                return False
+            
+            # Paste using Ctrl+V
+            await asyncio.sleep(0.1)  # Increased initial delay
+            pyautogui.hotkey('ctrl', 'v')
+            await asyncio.sleep(0.2)  # Increased wait for paste to complete
+            
+            # Restore original clipboard content with retries
+            if original_clipboard is not None:
+                for attempt in range(3):
+                    try:
+                        win32clipboard.OpenClipboard()
+                        win32clipboard.EmptyClipboard()
+                        win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, original_clipboard)
+                        win32clipboard.CloseClipboard()
+                        break
+                    except Exception as e:
+                        logger.warning(f"Attempt {attempt+1}: Failed to restore clipboard: {e}")
+                        await asyncio.sleep(0.1 * (attempt + 1))
+                else:
+                    logger.error("Failed to restore clipboard after retries")
+                    # Not fatal, so continue
             
             return True
         except Exception as e:
