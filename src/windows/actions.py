@@ -90,49 +90,71 @@ class WindowsActions:
             logger.error(f"Error scrolling at ({x}, {y}): {e}")
             return False
     
-    async def type_text(self, text: str) -> bool:
-        """
-        Type text using clipboard method to handle both English and Chinese characters
-        This method bypasses input method editors (IMEs) and works reliably
-        """
-        try:
-            if not text:
-                return True
+    # async def type_text(self, text: str) -> bool:
+    #     """
+    #     Type text using clipboard method to handle both English and Chinese characters
+    #     This method bypasses input method editors (IMEs) and works reliably
+    #     """
+    #     try:
+    #         if not text:
+    #             return True
                 
-            # Save current clipboard content
-            original_clipboard = None
-            try:
-                win32clipboard.OpenClipboard()
-                if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
-                    original_clipboard = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                win32clipboard.CloseClipboard()
-            except:
-                pass
+    #         # Save current clipboard content
+    #         original_clipboard = None
+    #         try:
+    #             win32clipboard.OpenClipboard()
+    #             if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+    #                 original_clipboard = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+    #             win32clipboard.CloseClipboard()
+    #         except:
+    #             pass
             
-            # Set text to clipboard
-            win32clipboard.OpenClipboard()
-            win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
-            win32clipboard.CloseClipboard()
+    #         # Set text to clipboard
+    #         win32clipboard.OpenClipboard()
+    #         win32clipboard.EmptyClipboard()
+    #         win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
+    #         win32clipboard.CloseClipboard()
             
-            # Paste using Ctrl+V
-            await asyncio.sleep(0.05)  # Small delay
-            pyautogui.hotkey('ctrl', 'v')
-            await asyncio.sleep(0.1)  # Wait for paste to complete
+    #         # Paste using Ctrl+V
+    #         await asyncio.sleep(0.05)  # Small delay
+    #         pyautogui.hotkey('ctrl', 'v')
+    #         await asyncio.sleep(0.1)  # Wait for paste to complete
             
-            # Restore original clipboard content
-            if original_clipboard is not None:
-                try:
-                    win32clipboard.OpenClipboard()
-                    win32clipboard.EmptyClipboard()
-                    win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, original_clipboard)
-                    win32clipboard.CloseClipboard()
-                except:
-                    pass
+    #         # Restore original clipboard content
+    #         if original_clipboard is not None:
+    #             try:
+    #                 win32clipboard.OpenClipboard()
+    #                 win32clipboard.EmptyClipboard()
+    #                 win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, original_clipboard)
+    #                 win32clipboard.CloseClipboard()
+    #             except:
+    #                 pass
+            
+    #         return True
+    #     except Exception as e:
+    #         logger.error(f"Error typing text '{text}': {e}")
+    #         return False
+    async def type_text(self, text: str) -> bool:
+        """使用SendMessage直接发送文本到窗口"""
+        hwnd = win32gui.GetForegroundWindow()
+        try:
+            if not hwnd or not win32gui.IsWindow(hwnd):
+                return False
+            
+            edit_hwnd = win32gui.FindWindowEx(hwnd, 0, "Edit", None)
+            if edit_hwnd:
+                win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, "")
+                win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
+                return True
+            
+            for char in text:
+                win32gui.SendMessage(hwnd, win32con.WM_CHAR, ord(char), 0)
+                await asyncio.sleep(0.01)  
             
             return True
+            
         except Exception as e:
-            logger.error(f"Error typing text '{text}': {e}")
+            logger.error(f"SendMessage输入失败: {e}")
             return False
     
     async def press_key(self, key: str) -> bool:

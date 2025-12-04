@@ -83,7 +83,7 @@ class MessageManager:
 		)
 		self._add_message_with_tokens(example_tool_call)
 		tool_message = ToolMessage(
-			content='macOS automation session started',
+			content='Windows automation session started',
 			tool_call_id=str(self.tool_id),
 		)
 		self._add_message_with_tokens(tool_message)

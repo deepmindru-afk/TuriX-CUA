@@ -42,8 +42,7 @@ class Controller:
 			return ActionResult(extracted_content='done', is_done=True)
 		@self.registry.action(
 				'Type', 
-				param_model=InputTextAction,
-				requires_mac_builder=False)
+				param_model=InputTextAction,)
 		async def input_text(text: str):
 			try:			
 				input_successful = await self.win.type_text(text)
@@ -132,7 +131,6 @@ class Controller:
 		@self.registry.action(
 			'RightSingle click at specific pixel',
 			param_model=RightClickPixel,
-			requires_mac_builder=False
 		)
 		async def RightSingle(position: list = [0,0]):
 			logger.debug(f'Correct clicking pixel position {position}')
@@ -153,7 +151,6 @@ class Controller:
 		@self.registry.action(
 			'Left click at specific pixel',
 			param_model=LeftClickPixel,
-			requires_mac_builder=False
 		)
 		async def Click(position: list = [0,0]):
 			logger.debug(f'Correct clicking pixel position {position}')
@@ -174,7 +171,6 @@ class Controller:
 		@self.registry.action(
 			'Drag an object from one pixel to another',
 			param_model=DragAction,
-			requires_mac_builder=False
 		)
 		async def Drag(position1: list = [0,0], position2: list = [0,0]):
 			try:
@@ -195,7 +191,6 @@ class Controller:
 		@self.registry.action(
 				'Move mouse to specific pixel',
 				param_model=MoveToAction,
-				requires_mac_builder=False
 		)
 		async def move_mouse(position: list = [0,0]):
 			logger.debug(f'Correct move mouse to position {position}')

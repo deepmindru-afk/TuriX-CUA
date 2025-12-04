@@ -18,7 +18,7 @@ class Registry:
 		self.registry = ActionRegistry()
 		self.exclude_actions = exclude_actions
 
-		self.arguments_to_ignore = ['browser', 'mac_tree_builder', 'builder']
+		self.arguments_to_ignore = ['browser', 'builder']
 
 	def _create_param_model(self, function: Callable) -> Type[BaseModel]:
 		"""Creates a Pydantic model from function signature"""
@@ -39,7 +39,6 @@ class Registry:
 		self,
 		description: str,
 		param_model: Optional[Type[BaseModel]] = None,
-		requires_mac_builder: bool = False,
 	):
 		"""Decorator for registering actions"""
 
@@ -70,7 +69,6 @@ class Registry:
 				description=description,
 				function=wrapped_func,
 				param_model=actual_param_model,
-				requires_mac_builder=requires_mac_builder,
 			)
 			self.registry.actions[func.__name__] = action
 			return func
@@ -91,16 +89,6 @@ class Registry:
 			sig = signature(action.function)
 			parameters = list(sig.parameters.values())
 			is_pydantic = parameters and issubclass(parameters[0].annotation, BaseModel)
-
-			# Prepare arguments based on parameter type
-			if action.requires_mac_builder:
-				if not ui_tree_builder:
-					raise ValueError(
-						f'Action {action_name} requires UI tree builder but none provided. This has to be used in combination of `requires_mac_builder=True` when registering the action.'
-					)
-				if is_pydantic:
-					return await action.function(validated_params, ui_tree_builder=ui_tree_builder)
-				return await action.function(**validated_params.model_dump(), ui_tree_builder=ui_tree_builder)
 			
 			if is_pydantic:
 				return await action.function(validated_params)
