@@ -8,6 +8,7 @@ import win32gui
 import win32con
 import win32api
 import win32clipboard
+import pyperclip
 
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ class WindowsActions:
     async def type_text(self, text: str) -> bool:
         """
         Type text using clipboard method to handle both English and Chinese characters
-        This method bypasses input method editors (IMEs) and works reliably
+        This method bypasses input method editors (IMEs) and works reliably, with robust clipboard restoration to avoid interference.
         """
         try:
             if not text:
@@ -101,59 +102,65 @@ class WindowsActions:
             
             # Save current clipboard content with retries
             original_clipboard = None
-            for attempt in range(3):  # Retry up to 3 times
+            for attempt in range(3):  # Increased retries
                 try:
-                    win32clipboard.OpenClipboard()
-                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
-                        original_clipboard = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                    win32clipboard.CloseClipboard()
+                    original_clipboard = pyperclip.paste()
                     break
                 except Exception as e:
                     logger.warning(f"Attempt {attempt+1}: Failed to save original clipboard: {e}")
-                    await asyncio.sleep(0.1 * (attempt + 1))  # Exponential backoff
+                    await asyncio.sleep(0.2 * (attempt + 1))  # Longer exponential backoff
             else:
-                logger.error("Failed to save original clipboard after retries")
-                return False
+                logger.error("Failed to save original clipboard after max retries - proceeding without save")
             
-            # Set text to clipboard with retries
+            # Set text to clipboard with retries and verification
             for attempt in range(3):
                 try:
-                    win32clipboard.OpenClipboard()
-                    win32clipboard.EmptyClipboard()
-                    win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
-                    win32clipboard.CloseClipboard()
+                    pyperclip.copy(text)
+                    await asyncio.sleep(0.05)  # Brief pause for sync
+                    if pyperclip.paste() != text:
+                        raise ValueError("Clipboard copy verification failed")
                     break
                 except Exception as e:
                     logger.warning(f"Attempt {attempt+1}: Failed to set clipboard: {e}")
-                    await asyncio.sleep(0.1 * (attempt + 1))
+                    await asyncio.sleep(0.2 * (attempt + 1))
             else:
-                logger.error("Failed to set clipboard after retries")
+                logger.error("Failed to set clipboard after max retries")
                 return False
             
             # Paste using Ctrl+V
-            await asyncio.sleep(0.1)  # Increased initial delay
+            await asyncio.sleep(0.1)
             pyautogui.hotkey('ctrl', 'v')
-            await asyncio.sleep(0.2)  # Increased wait for paste to complete
+            await asyncio.sleep(0.3)  # Increased wait for paste to complete reliably
             
-            # Restore original clipboard content with retries
+            # Restore original clipboard content with retries and final verification
             if original_clipboard is not None:
-                for attempt in range(3):
+                restored = False
+                for attempt in range(5):
                     try:
-                        win32clipboard.OpenClipboard()
-                        win32clipboard.EmptyClipboard()
-                        win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, original_clipboard)
-                        win32clipboard.CloseClipboard()
-                        break
+                        pyperclip.copy(original_clipboard)
+                        await asyncio.sleep(0.05)
+                        if pyperclip.paste() == original_clipboard:
+                            restored = True
+                            break
+                        else:
+                            logger.warning(f"Attempt {attempt+1}: Restoration verification failed - retrying")
                     except Exception as e:
                         logger.warning(f"Attempt {attempt+1}: Failed to restore clipboard: {e}")
-                        await asyncio.sleep(0.1 * (attempt + 1))
+                        await asyncio.sleep(0.2 * (attempt + 1))
+                if not restored:
+                    logger.critical("Failed to restore original clipboard after max retries - interference may have occurred!")
                 else:
-                    logger.error("Failed to restore clipboard after retries")
-                    # Not fatal, so continue
+                    logger.debug("Clipboard restored successfully")
             
             return True
         except Exception as e:
             logger.error(f"Error typing text '{text}': {e}")
+            # Attempt emergency restore if possible
+            if original_clipboard is not None:
+                try:
+                    pyperclip.copy(original_clipboard)
+                except:
+                    pass
             return False
     
     
