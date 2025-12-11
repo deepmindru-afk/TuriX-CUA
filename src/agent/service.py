@@ -39,6 +39,7 @@ from src.controller.registry.views import ActionModel
 from src.controller.service import Controller
 from src.utils import time_execution_async
 from src.agent.output_schemas import OutputSchemas
+from src.agent.planner_service import Planner
 from src.agent.structured_llm import *
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ class Agent:
         self.current_time = datetime.now()
         self.wait_this_step = False
         self.agent_id = agent_id or str(uuid.uuid4())
-        self.original_task: str = task
+        self.original_task = task
         self.task = task
         self.resume = resume
         self.llm = to_structured(llm, OutputSchemas.AGENT_RESPONSE_FORMAT, AgentStepOutput)
@@ -154,7 +155,12 @@ class Agent:
         self.short_memory = ''
         self.long_memory = ''
         self.infor_memory = []
-        self.last_pid = None
+
+        self.planner = Planner(
+            planner_llm=self.planner_llm,
+            task=self.task,
+        )
+
         if save_conversation_path:
             logger.info(f'Saving conversation to {save_conversation_path}')
 
@@ -203,7 +209,7 @@ class Agent:
         }
         file_name = os.path.join(self.save_temp_file_path, f"memory.jsonl")
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
-        with open(file_name, "w", encoding=self.save_training_data_path_encoding) as f:
+        with open(file_name, "w", encoding=self.save_conversation_path_encoding) as f:
             if os.path.getsize(file_name) > 0:
                 f.truncate(0)
             f.write(json.dumps(data, ensure_ascii=False, default=lambda o: list(o) if isinstance(o, set) else o) + "\n")
@@ -216,7 +222,7 @@ class Agent:
             return
         file_name = os.path.join(self.save_temp_file_path, f".jsonl")
         if os.path.exists(file_name):
-            with open(file_name, "r", encoding=self.save_training_data_path_encoding) as f:
+            with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
                 lines = f.readlines()
             if len(lines) >= 1:
                 data = json.loads(lines[-1])
@@ -379,13 +385,6 @@ class Agent:
         return parsed, record
    
     def _log_response(self, response: AgentOutput) -> None:
-        if 'Success' in response.current_state.evaluation_previous_goal:
-            emoji = '✅'
-        elif 'Failed' in response.current_state.evaluation_previous_goal:
-            emoji = '❌'
-        else:
-            emoji = '❓'
-        # logger.info(f'{emoji} Eval: {response.current_state.evaluation_previous_goal}')
         logger.info(f'Eval: {response.current_state.evaluation_previous_goal}')
         logger.info(f'Memory: {self.state_memory}')
         logger.info(f'Next goal: {response.current_state.next_goal}')
