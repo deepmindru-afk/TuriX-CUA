@@ -243,7 +243,7 @@ class Agent:
                     {
                         "type": "text",
                         "content": f"The screenshot is provided. The previous action is evaluated to be {self.evaluation}.\n\n Saved information memory: {self.infor_memory}\n\n"
-                        f"{self.short_memory}"
+                        f"The action and goal you have done is:{self.long_memory}"
                     },
                     {
                         "type": "image_url",
