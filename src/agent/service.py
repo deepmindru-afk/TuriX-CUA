@@ -288,10 +288,9 @@ class Agent:
                         "type": "text",
                         "content": (
                             f"Previous step is {prev_step_id}.\n\n"
-                            f"Actions take by actor last step:\n{self.last_step_action}\n\n"
-                            f"Previous Actions Short History:\n{self.short_memory}\n\n"
                             f"Necessary information remembered is:\n{self.infor_memory}\n\n"
-                            "Please provide a JSON with correct format: "
+                            f"Previous Actions Short History:\n{self.short_memory}\n\n"
+                            f"Actions take by actor last step:\n{self.last_step_action}\n\n"
                         )
                     }
                 ]
@@ -380,8 +379,8 @@ class Agent:
                         {
                             "type": "text",
                             "content": (
-                                f"Your goal to achieve in this step is: {self.next_goal}\n\n"
                                 f"Necessary information remembered is: {self.infor_memory}\n\n"
+                                f"Your goal to achieve in this step is: {self.next_goal}\n\n"   
                             )
                         },
                         {
