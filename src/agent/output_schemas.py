@@ -177,3 +177,37 @@ class OutputSchemas:
             "schema": BRAIN_SCHEMA
         }
     }
+
+    PLANNER_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "step_by_step_plan": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "step_id": {
+                            "type": "string",
+                            "pattern": "^Step \\d+$"
+                        },
+                        "description": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["step_id", "description"],
+                    "additionalProperties": False
+                }
+            }
+        },
+        "required": ["step_by_step_plan"],
+        "additionalProperties": False
+    }
+
+    PLANNER_RESPONSE_FORMAT = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "planner_output",
+            "strict": True,
+            "schema": PLANNER_SCHEMA
+        }
+    }

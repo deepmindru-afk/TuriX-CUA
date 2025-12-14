@@ -132,7 +132,7 @@ class Agent:
         self.resume = resume
         self.brain_llm = to_structured(brain_llm, OutputSchemas.BRAIN_RESPONSE_FORMAT, BrainOutput)
         self.actor_llm = to_structured(actor_llm, OutputSchemas.ACTION_RESPONSE_FORMAT, ActorOutput)
-        self.planner_llm = planner_llm
+        self.planner_llm = to_structured(planner_llm, OutputSchemas.PLANNER_RESPONSE_FORMAT, PlannerOutput)
 
         self.save_actor_conversation_path = save_actor_conversation_path
         self.save_actor_conversation_path_encoding = save_actor_conversation_path_encoding

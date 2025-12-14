@@ -2,9 +2,8 @@ from __future__ import annotations
 import re
 import json
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from src.controller.views import *
-from pydantic.v1 import validator
 # ---------------------------------------------------------------------------
 # DISCRIMINATED UNION FOR A SINGLE ACTION ITEM
 # ---------------------------------------------------------------------------
@@ -116,9 +115,27 @@ class ActorOutput(BaseModel):
         facilitating direct access to structured data.
         """
         return self.model_dump(exclude_none=True, exclude_unset=True)
+    
+class Step(BaseModel):
+    step_id: str = Field(..., pattern=r"^Step \d+$")
+    description: Optional[str]
+
+class PlannerOutput(BaseModel):
+    step_by_step_plan: List[Step] = Field(...,
+        min_items=1,
+        description="Ordered high-level plan objects, each must start with 'Step N'."
+    )
+
+    @property
+    def content(self) -> str:
+        lines = []
+        for step in self.step_by_step_plan:
+            lines.append(f"{step.step_id}: {step.description}")
+        return "\n".join(lines)
 
 
 __all__ = [
     "BrainOutput",
     "ActorOutput",
+    "PlannerOutput"
 ]

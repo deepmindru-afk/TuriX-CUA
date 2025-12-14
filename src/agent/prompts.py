@@ -296,9 +296,9 @@ SYSTEM_PROMPT_FOR_PLANNER
         "total_iterations": times you need to repeat,
     }},
     "step_by_step_plan": [
-        {{ "step_id": "Step 1", "step_type": "normal", "description": "[Goal Description]" }},
-        {{ "step_id": "Step 2", "step_type": "normal", "description": "[Goal Description]" }},
-        {{ "step_id": "Step N", "step_type": "normal", "description": "[Goal Description]" }}
+        {{ "step_id": "Step 1", "description": "[Goal Description]" }},
+        {{ "step_id": "Step 2", "description": "[Goal Description]" }},
+        {{ "step_id": "Step N", "description": "[Goal Description]" }}
     ]
 }}
 - **Output Format for Multi-turn Repetitive Tasks:** Same JSON structure as above, but with total_iterations > 1. In the first turn (initial task), set current_iteration=1 and output the plan for the FIRST instance/item only. In subsequent turns, the human message will specify the previous completed iteration (e.g., "Continue: previous iteration X completed, summary: [brief what was done], original task: [reminder]"), then set current_iteration = previous + 1 and output the plan ONLY for that specific next instance/item.
