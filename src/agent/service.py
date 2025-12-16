@@ -253,7 +253,9 @@ class Agent:
         logger.debug(f"[Memory] Raw text: {cleaned_memory_response}")
         parsed = json.loads(cleaned_memory_response)
         memory = parsed["summary"]
-        self.brain_memory = memory
+        self.brain_memory = 'The concise memory summary is:\n'
+        self.brain_memory += memory
+        self.brain_memory += 'The detail steps info are:\n'
 
     async def _update_memory(self) -> None:
         """
