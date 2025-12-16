@@ -3,21 +3,28 @@
 
   "brain_llm": {
     "provider": "turix",
-    "model_name": "turix-model",
+    "model_name": "turix-brain-model",
     "api_key": "your_api_key_here",
     "base_url": "https://llm.turixapi.io/v1" 
   },
 
   "actor_llm": {
     "provider": "turix",
-    "model_name": "turix-model",
+    "model_name": "turix-actor-model",
     "api_key": "your_api_key_here",
     "base_url": "https://llm.turixapi.io/v1" 
   },
 
   "planner_llm": {
     "provider": "turix",
-    "model_name": "turix-model",
+    "model_name": "turix-planner-model",
+    "api_key": "your_api_key_here",
+    "base_url": "https://llm.turixapi.io/v1" 
+  },
+
+  "memory_llm": {
+    "provider": "turix",
+    "model_name": "turix-memory-model",
     "api_key": "your_api_key_here",
     "base_url": "https://llm.turixapi.io/v1" 
   },

@@ -51,10 +51,33 @@ class CurrentState(BaseModel):
     ask_human: str = Field(..., description="Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)")
     next_goal: str = Field(..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP")
 
-
 # ---------------------------------------------------------------------------
 # AGENT STEP OUTPUT (MAIN MODEL)
 # ---------------------------------------------------------------------------
+
+class MemoryOutput(BaseModel):
+    summary: str = Field(..., description="Brief summary to remember for future steps.")
+
+    def __repr__(self) -> str:
+        non_none = self.model_dump(exclude_none=True)
+        field_strs = ", ".join(f"{k}={v!r}" for k, v in non_none.items())
+        return f"{self.__class__.__name__}({field_strs})"
+
+    @property
+    def content(self) -> str:
+        """
+        Returns a JSON-formatted string representation of the instance,
+        allowing access via the `.content` attribute.
+        """
+        return self.model_dump_json(exclude_none=True, exclude_unset=True)
+
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        """
+        Returns the dictionary representation of the instance,
+        facilitating direct access to structured data.
+        """
+        return self.model_dump(exclude_none=True, exclude_unset=True)
 
 class BrainOutput(BaseModel):
     """Schema for the agent's per‑step output.
@@ -137,5 +160,6 @@ class PlannerOutput(BaseModel):
 __all__ = [
     "BrainOutput",
     "ActorOutput",
-    "PlannerOutput"
+    "PlannerOutput",
+    "MemoryOutput"
 ]

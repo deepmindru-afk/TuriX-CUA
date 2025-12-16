@@ -155,14 +155,11 @@ class OutputSchemas:
                     "step_evaluate": {"type": "string"},
                     "ask_human": {"type": "string"},
                     "next_goal": {"type": "string"},
-                    # 用于记录全局任务进度
-                    "task_progress": {"type": "string"}
                 },
                 "required": [
                     "step_evaluate",
                     "ask_human",
-                    "next_goal",
-                    "task_progress"
+                    "next_goal"
                 ]
             },
         },
@@ -175,6 +172,23 @@ class OutputSchemas:
             "name": "agent_state_output",
             "strict": True,
             "schema": BRAIN_SCHEMA
+        }
+    }
+
+    MEMORY_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"}
+        },
+        "required": ["summary"]
+    }
+
+    MEMORY_RESPONSE_FORMAT = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "memory_output",
+            "strict": True,
+            "schema": MEMORY_SCHEMA
         }
     }
 

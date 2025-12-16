@@ -156,8 +156,7 @@ It must be valid JSON, so be careful with quotes and commas.
   "current_state": {{
     "step_evaluate": "Success/Failed (based on step completion and your analysis)",
     "ask_human": "Describe what you want user to do or No (No if nothing to ask for confirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or confirm preference.)",
-    "next_goal": "Goal of this step to achieve the task, ONLY DESCRIBE THE EXPECTED RESULT OF THIS STEP",
-    "task_progress": "A maintained list of the global task progress. Format: - [Completed] Task A\n - [In Progress] Task B\n - [Pending] Task C (brief summary of remaining). Update this list every step to prevent forgetting long-term goals."
+    "next_goal": "Goal of this step to achieve the task, ONLY DESCRIBE THE EXPECTED RESULT OF THIS STEP"
 }},
 }}
 === ROLE-SPECIFIC DIRECTIVES ===
@@ -212,6 +211,30 @@ WHEN OUTPUTTING MULTIPLE ACTIONS AS A LIST, EACH ACTION MUST BE AN OBJECT.
 - Responsibilities:
   1. Follow the next_goal precisely using available actions:
 {self.action_descriptions}
+            """
+        )
+    
+class MemoryPrompt:
+    def __init__(
+        self,
+        action_descriptions: str,
+        max_actions_per_step: int = 10,
+    ):
+        self.action_descriptions = action_descriptions
+        self.current_time = datetime.now()
+        self.max_actions_per_step = max_actions_per_step
+    def get_system_message(self) -> SystemMessage:
+        return SystemMessage(
+            content=f"""
+SYSTEM PROMPT FOR MEMORY MODEL:
+=== GLOBAL INSTRUCTIONS ===
+You are a memory summarization model for a computer use agent operating on macOS 15.3.
+Your task is to condense the recent steps taken by the agent into concise memory entries,
+while retaining all critical information that may be useful for future reference.
+- Always output a string of memory without useless words, and adhere strictly to JSON output format:
+{{
+    "summary": "Concise summary of recent actions and important information for future reference"
+}}
             """
         )
 
