@@ -25,6 +25,7 @@ class ActionResult(BaseModel):
     extracted_content: Optional[str] = None
     error: Optional[str] = None
     include_in_memory: bool = False 
+    current_app_pid: Optional[int] = None
     action_is_valid: Optional[bool] = True
 
 
