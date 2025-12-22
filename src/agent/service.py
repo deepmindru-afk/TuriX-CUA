@@ -96,6 +96,7 @@ class Agent:
         short_memory_len : int,
         controller: Controller = Controller(),
         use_ui = False,
+        use_search: bool = True,
         planner_llm: Optional[BaseChatModel] = None,
         save_brain_conversation_path: Optional[str] = None,
         save_brain_conversation_path_encoding: Optional[str] = 'utf-8',
@@ -138,6 +139,7 @@ class Agent:
         self.memory_llm = to_structured(memory_llm, OutputSchemas.MEMORY_RESPONSE_FORMAT, MemoryOutput)
         self.brain_llm = to_structured(brain_llm, OutputSchemas.BRAIN_RESPONSE_FORMAT, BrainOutput)
         self.actor_llm = to_structured(actor_llm, OutputSchemas.ACTION_RESPONSE_FORMAT, ActorOutput)
+        self.planner_llm_raw = planner_llm
         self.planner_llm = to_structured(planner_llm, OutputSchemas.PLANNER_RESPONSE_FORMAT, PlannerOutput)
 
         self.save_actor_conversation_path = save_actor_conversation_path
@@ -153,6 +155,9 @@ class Agent:
         self.max_input_tokens = max_input_tokens
         self.save_temp_file_path = os.path.join(os.path.dirname(__file__), 'temp_files')
         self.use_ui = use_ui
+        self.use_search = use_search
+        self.next_goal = ''
+        self.brain_thought = ''
 
         self.mac_tree_builder = MacUITreeBuilder()
         self.controller = controller
@@ -171,6 +176,8 @@ class Agent:
                 planner_llm=self.planner_llm,
                 task=self.task,
                 max_input_tokens=self.max_input_tokens,
+                search_llm=self.planner_llm_raw,
+                use_search=self.use_search,
             )
 
         # self.tool_calling_method = self.set_tool_calling_method(tool_calling_method)

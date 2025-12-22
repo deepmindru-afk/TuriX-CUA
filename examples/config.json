@@ -34,6 +34,7 @@
     "short_memory_len": 5,
     "memory_budget": 500,
     "use_ui": false,
+    "use_search": true,
     "use_plan": false,
     "max_actions_per_step": 5,
     "max_steps": 100,
