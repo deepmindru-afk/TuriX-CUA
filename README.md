@@ -175,16 +175,60 @@ Edit task in `examples/config.json`:
 Get API now with $20 credit from our [official web page](https://turix.ai/api-platform/).
 Login to our website and the key is at the bottom.
 
-In this multi-agent branch, you need to set both the brain model and the actor model.
+In this multi-agent branch, you need to set the brain, actor, and memory models. If you enable planning
+(`agent.use_plan: true`), you also need to set the planner model.
 We strongly recommand you to set the turix-actor model as the actor. The brain can be any VLMs you like, we provide qwen3vl in out platform. You can switch to Gemini3 pro if 
 you like.
 
 Edit API in `examples/config.json`:
 ```json
-"llm": {
+"brain_llm": {
       "provider": "turix",
+      "model_name": "turix-brain-model",
       "api_key": "YOUR_API_KEY",
       "base_url": "https://llm.turixapi.io/v1"
+   },
+"actor_llm": {
+      "provider": "turix",
+      "model_name": "turix-actor-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"memory_llm": {
+      "provider": "turix",
+      "model_name": "turix-memory-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"planner_llm": {
+      "provider": "turix",
+      "model_name": "turix-planner-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   }
+```
+
+For a local Ollama setup, point each role to your Ollama server:
+```json
+"brain_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"actor_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"memory_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"planner_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
    }
 ```
 
@@ -200,7 +244,7 @@ if provider == "name_you_want":
             model="gpt-4.1-mini", api_key=api_key, temperature=0.3
         )
 ```
-Switch between ChatOpenAI, ChatGoogleGenerativeAI and ChatAnthropic base on your llm. Also change the model name.
+Switch between ChatOpenAI, ChatGoogleGenerativeAI, ChatAnthropic, or ChatOllama base on your llm. Also change the model name.
 
 #### 4.4 Start the Agent
 

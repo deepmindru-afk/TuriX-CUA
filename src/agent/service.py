@@ -19,6 +19,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI, AzureChatOpenAI          # OpenAI endpoints
 from langchain_anthropic import ChatAnthropic                     # Claude
 from langchain_google_genai import ChatGoogleGenerativeAI  
+from langchain_ollama import ChatOllama
 from langchain_core.messages import (
     BaseMessage,
 )
@@ -67,6 +68,7 @@ def to_structured(llm: BaseChatModel, Schema, Structured_Output) -> BaseChatMode
 
     • ChatOpenAI / AzureChatOpenAI  → bind(response_format=…)      (OpenAI style)
     • ChatAnthropic / ChatGoogleGenerativeAI → with_structured_output(…) (Claude/Gemini style)
+    • ChatOllama → bind(format=<json schema>) (Ollama json schema)
     • anything else → returned unchanged
     """
     OPENAI_CLASSES: tuple[Type[BaseChatModel], ...] = (ChatOpenAI, AzureChatOpenAI)
@@ -74,6 +76,7 @@ def to_structured(llm: BaseChatModel, Schema, Structured_Output) -> BaseChatMode
         ChatAnthropic,
         ChatGoogleGenerativeAI,
     )
+    OLLAMA_CLASSES: tuple[Type[BaseChatModel], ...] = (ChatOllama,)
 
     if isinstance(llm, OPENAI_CLASSES):
         # OpenAI only: use the response_format param with your flattened schema
@@ -82,6 +85,15 @@ def to_structured(llm: BaseChatModel, Schema, Structured_Output) -> BaseChatMode
     if isinstance(llm, ANTHROPIC_OR_GEMINI):
         # Claude & Gemini accept any schema textually → keep the nice Pydantic model
         return llm.with_structured_output(Structured_Output)
+
+    if isinstance(llm, OLLAMA_CLASSES):
+        # Ollama expects a raw JSON schema in the "format" param.
+        schema = None
+        if isinstance(Schema, dict):
+            json_schema = Schema.get("json_schema")
+            if isinstance(json_schema, dict):
+                schema = json_schema.get("schema")
+        return llm.bind(format=schema or "json")
 
     # Fallback: no structured output
     return llm

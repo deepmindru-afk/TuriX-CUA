@@ -9,6 +9,7 @@ sys.path.insert(0, str(project_root))
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
 
 from src import Agent
 from src.controller.service import Controller
@@ -49,6 +50,14 @@ def build_llm(cfg: dict):
             openai_api_key=api_key,
             temperature=0.3,
         )
+
+    if provider == "ollama":
+        if not model_name:
+            raise ValueError("Ollama provider requires 'model_name'.")
+        ollama_kwargs = {"model": model_name, "temperature": 0.3}
+        if base_url:
+            ollama_kwargs["base_url"] = base_url
+        return ChatOllama(**ollama_kwargs)
 
     if provider == "google_flash":
         return ChatGoogleGenerativeAI(
