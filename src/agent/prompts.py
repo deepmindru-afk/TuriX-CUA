@@ -125,7 +125,7 @@ class ActorPrompt_turix:
     def __init__(
         self,
         action_descriptions: str,
-        max_actions_per_step: int = 10,
+        max_actions_per_step: int = 8,
     ):
         self.action_descriptions = action_descriptions
         self.current_time = datetime.now()
@@ -140,6 +140,7 @@ SYSTEM PROMPT FOR ACTION MODEL:
 - You will receive the goal you need to achieve, and execute appropriate actions based on the goal you received.
 - You can only open the apps that are already installed in the computer, {apps_message}
 - All the coordinates are normalized to 0-1000. You MUST output normalized positions.
+- The maximum number of actions you can output in one step is {self.max_actions_per_step}.
 - Always adhere strictly to JSON output format:
 {{
     "action": [List of all actions to be executed this step],
