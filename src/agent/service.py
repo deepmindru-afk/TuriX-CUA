@@ -314,10 +314,6 @@ class Agent:
                 state = root._get_visible_clickable_elements_string() if root else "No UI tree found."
             else:
                 state = ''
-            if self.n_steps == 1:
-                apps = _get_installed_app_names()
-                app_list = ', '.join(apps)
-                state = f'The available apps in this macbook is: {app_list}'
             self.save_memory()
             
             # ---------------------------
