@@ -103,6 +103,8 @@ For more details, check our [report](https://turix.ai/technical-report/).
 
 ## 🚀 Quick‑Start (Windows)
 
+> **Legacy Branch**—we will switch to the multi-agent-windows branch as the main windows branch, and this branch will not be updated after 2025.12.31.
+
 > **We never collect data**—install, grant permissions, and hack away.
 
 > **0. Mac Users**: Switch to the `main` branch for MacOS-specific setup and installation instructions.
