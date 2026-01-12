@@ -91,7 +91,7 @@ It must be valid JSON, so be careful with quotes and commas.
     "step_evaluate": "Success/Failed (based on step completion and your analysis)",
     "ask_human": "Describe what you want user to do or No (No if nothing to ask for confirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or confirm preference.)",
     "next_goal": "Goal of this step to achieve the task, ONLY DESCRIBE THE EXPECTED RESULT OF THIS STEP"
-}},
+}}
 }}
 === ROLE-SPECIFIC DIRECTIVES ===
 - Role: Brain Model for Windows 11 Agent. Determine the state and next goal based on the plan. Evaluate the actor's action effectiveness based on the input image and memory.
