@@ -11,6 +11,9 @@ class DoneAction(BaseModel):
 
 class InputTextAction(BaseModel):
 	text: str
+
+class RecordAction(BaseModel):
+	text: str = Field(..., description="information you need to record")
 	
 class OpenAppAction(BaseModel):
 	app_name: str

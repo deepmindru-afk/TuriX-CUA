@@ -2,27 +2,46 @@
   "logging_level": "INFO",
   "working_dir_base": "../turix/trainingdata/task",
   "cleanup_previous_runs": true,
-  
-  "llm": {
+
+  "brain_llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
     "base_url": "https://llm.turixapi.io/v1",
-    "model_name": "turix-model"
+    "model_name": "turix-brain-model"
+  },
+
+  "actor_llm": {
+    "provider": "turix",
+    "api_key": "your_api_key_here",
+    "base_url": "https://llm.turixapi.io/v1",
+    "model_name": "turix-actor-model"
+  },
+
+  "memory_llm": {
+    "provider": "turix",
+    "api_key": "your_api_key_here",
+    "base_url": "https://llm.turixapi.io/v1",
+    "model_name": "turix-memory-model"
   },
 
   "planner_llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
     "base_url": "https://llm.turixapi.io/v1",
-    "model_name": "turix-model"
+    "model_name": "turix-planner-model"
   },
 
   "agent": {
     "task": "open Chrome, go to github, and search for turix-cua in the github webpage. Enter the TuriX-CUA repository, and star it.",
     "short_memory_len": 5,
+    "memory_budget": 2000,
+    "use_search": true,
+    "use_plan": false,
     "max_actions_per_step": 5,
     "max_steps": 100,
-    "save_conversation_path": "llm_interactions.log",
-    "save_conversation_path_encoding": "utf-8"
+    "save_brain_conversation_path": "brain_llm_interactions.log",
+    "save_brain_conversation_path_encoding": "utf-8",
+    "save_actor_conversation_path": "actor_llm_interactions.log",
+    "save_actor_conversation_path_encoding": "utf-8"
   }
 }

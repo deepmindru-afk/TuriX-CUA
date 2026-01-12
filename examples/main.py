@@ -33,6 +33,7 @@ if config_path.exists():
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
 
 from src import Agent
 from src.controller.service import Controller
@@ -142,6 +143,14 @@ def build_llm(cfg: dict):
             temperature=temperature
         )
 
+    elif provider == "ollama":
+        if not model:
+            raise ValueError("Ollama provider requires 'model_name'.")
+        ollama_kwargs = {"model": model, "temperature": temperature}
+        if base_url:
+            ollama_kwargs["base_url"] = base_url
+        return ChatOllama(**ollama_kwargs)
+
     else:
         raise ValueError(f"Unknown llm provider '{provider}'")
 
@@ -182,8 +191,11 @@ def main(config_path: str = "config.json"):
         except Exception as e:
             pass
     # --- Build LLM & Agent --------------------------------------------------
-    llm = build_llm(cfg["llm"])
-    planner_llm = build_llm(cfg["planner_llm"])
+    use_plan = cfg.get("agent", {}).get("use_plan", False)
+    brain_llm = build_llm(cfg["brain_llm"])
+    actor_llm = build_llm(cfg["actor_llm"])
+    memory_llm = build_llm(cfg["memory_llm"])
+    planner_llm = build_llm(cfg["planner_llm"]) if use_plan else None
     agent_cfg = cfg["agent"]
     controller = Controller()
 
@@ -192,13 +204,23 @@ def main(config_path: str = "config.json"):
 
     agent = Agent(
         task=agent_cfg["task"],
-        llm=llm,
+        brain_llm=brain_llm,
+        actor_llm=actor_llm,
+        memory_llm=memory_llm,
         planner_llm=planner_llm,
+        memory_budget=agent_cfg.get("memory_budget", 500),
         short_memory_len=agent_cfg.get("short_memory_len", 5),
         controller=controller,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 5),
-        save_conversation_path=agent_cfg.get("save_conversation_path"),
-        save_conversation_path_encoding=agent_cfg.get("save_conversation_path_encoding", "utf-8"),
+        use_search=agent_cfg.get("use_search", True),
+        save_brain_conversation_path=agent_cfg.get("save_brain_conversation_path"),
+        save_brain_conversation_path_encoding=agent_cfg.get(
+            "save_brain_conversation_path_encoding", "utf-8"
+        ),
+        save_actor_conversation_path=agent_cfg.get("save_actor_conversation_path"),
+        save_actor_conversation_path_encoding=agent_cfg.get(
+            "save_actor_conversation_path_encoding", "utf-8"
+        ),
     )
 
     async def runner():

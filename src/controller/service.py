@@ -15,6 +15,7 @@ from src.controller.views import (
 	ScrollDownAction,
 	ScrollUpAction,
 	MoveToAction,
+	RecordAction,
 )
 from src.utils import time_execution_async, time_execution_sync
 from src.windows.openapp import open_application_by_name
@@ -234,10 +235,10 @@ class Controller:
 			
 		@self.registry.action(
 			'Tell the short memory that you are recording information',
-			param_model=NoParamsAction
+			param_model=RecordAction
 		)
-		async def record_info():
-			return ActionResult(extracted_content=f'Recorded info into information_stored.')
+		async def record_info(text: str):
+			return ActionResult(extracted_content=f'{text}')
 		
 		@self.registry.action(
 			'Wait',

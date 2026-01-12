@@ -42,6 +42,8 @@ Prefer your own model? **Change in `config.json` and go.**
 
 ## 📰 Latest News
 
+**December 30, 2025** - 🎉 Significant update in Agent Architecture. We introduce a multi-model architecture in the multi-agent branch, releasing the stress from a single model to multiple models.
+
 **October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across both **macOS** and **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
 
 Ready to level up? Update your `config.json` and start automating—happy hacking! 🎉
@@ -152,10 +154,57 @@ Login to our website and the key is at the bottom.
 
 Edit API in `examples/config.json`:
 ```json
-"llm": {
+"brain_llm": {
       "provider": "turix",
+      "model_name": "turix-brain-model",
       "api_key": "YOUR_API_KEY",
       "base_url": "https://llm.turixapi.io/v1"
+   },
+"actor_llm": {
+      "provider": "turix",
+      "model_name": "turix-actor-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"memory_llm": {
+      "provider": "turix",
+      "model_name": "turix-memory-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"planner_llm": {
+      "provider": "turix",
+      "model_name": "turix-planner-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   }
+```
+
+In this multi-agent branch, you need to set the brain, actor, and memory models. If you enable planning
+(`agent.use_plan: true`), you also need to set the planner model.
+We strongly recommend you set the turix-actor model as the actor. The brain can be any VLM you like.
+
+For a local Ollama setup, point each role to your Ollama server:
+```json
+"brain_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"actor_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"memory_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"planner_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
    }
 ```
 
@@ -171,7 +220,7 @@ if provider == "name_you_want":
             model="gpt-4.1-mini", api_key=api_key, temperature=0.3
         )
 ```
-Switch between ChatOpenAI, ChatGoogleGenerativeAI and ChatAnthropic base on your llm. Also change the model name.
+Switch between ChatOpenAI, ChatGoogleGenerativeAI, ChatAnthropic, or ChatOllama base on your llm. Also change the model name.
 
 #### 3.4 Start the Agent
 
@@ -202,10 +251,11 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2025 Q4** | **✅ Next-Gen AI Model** | Significantly improved reasoning and task execution capabilities |
 | **2025 Q4** | **✅ Support Gemini-3-pro model** | Run with any compatible vision language models |
 | **2025 Q4** | **✅ Planner** | Understands user intent and makes step-by-step plans to complete tasks |
-| **2025 Q4** | **Multi-Agent Architecture** | Evaluate and guide each step in working |
-| **2025 Q4** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
+| **2025 Q4** | **✅ Multi-Agent Architecture** | Evaluate and guide each step in working |
+| **2025 Q4** | **✅ Duckduckgo Integration** | Speed up the information gathering process, for smarter planning (multi-agent branch) |
+| **2026 Q1** | **Ollama Support** | Support the Ollama Qwen3vl models |
+| **2026 Q1** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
 | **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
 | **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
-

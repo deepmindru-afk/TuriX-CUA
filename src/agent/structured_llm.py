@@ -1,22 +1,20 @@
 from __future__ import annotations
-import re
-import json
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from src.controller.views import *
-from pydantic.v1 import validator
+
 # ---------------------------------------------------------------------------
 # DISCRIMINATED UNION FOR A SINGLE ACTION ITEM
 # ---------------------------------------------------------------------------
 
 class ActionItem(BaseModel):
     """Exactly one of the fields must be populated to specify the concrete action."""
-    model_config = ConfigDict(exclude_none=True) 
+    model_config = ConfigDict(exclude_none=True)
     done: Optional[NoParamsAction] = None
     input_text: Optional[InputTextAction] = None
     open_app: Optional[OpenAppAction] = None
     run_apple_script: Optional[AppleScriptAction] = None
-    Hotkey: Optional[PressAction] = None 
+    Hotkey: Optional[PressAction] = None
     multi_Hotkey: Optional[PressCombinedAction] = None
     RightSingle: Optional[RightClickPixel] = None
     Click: Optional[LeftClickPixel] = None
@@ -24,49 +22,85 @@ class ActionItem(BaseModel):
     move_mouse: Optional[MoveToAction] = None
     scroll_up: Optional[ScrollUpAction] = None
     scroll_down: Optional[ScrollDownAction] = None
-    record_info: Optional[NoParamsAction] = None
+    record_info: Optional[RecordAction] = None
     wait: Optional[NoParamsAction] = None
 
     def __repr__(self) -> str:
         non_none = self.model_dump(exclude_none=True)
         field_strs = ", ".join(f"{k}={v!r}" for k, v in non_none.items())
         return f"{self.__class__.__name__}({field_strs})"
-    
-    @field_validator("wait", "record_info", mode="before")
+
+    @field_validator("wait", mode="before")
     def fix_empty_string(cls, v):
         if v == "" or v is None:
-            return {}             # an empty dict is valid input for NoParamsAction
+            return {}
         if not isinstance(v, dict):
             return {}
         return v
 
 # ---------------------------------------------------------------------------
-# CURRENT‑STATE SUB‑MODEL
+# CURRENT-STATE SUB-MODEL
 # ---------------------------------------------------------------------------
+
+class Analysis(BaseModel):
+    analysis: str = Field(..., description="Detailed analysis of how the current state matches the expected state.")
 
 class CurrentState(BaseModel):
-    evaluation_previous_goal: str = Field(..., description="Evaluation of the previous goal execution.")
-    next_goal: str = Field(..., description="The immediate next goal for the agent.")
-    information_stored: str = Field(..., description="Information to remember.")
-
+    step_evaluate: str = Field(..., description="Success/Failed (based on step completion)")
+    ask_human: str = Field(
+        ...,
+        description=(
+            "Describe what you want user to do or No (No if nothing to ask for comfirmation. "
+            "If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)"
+        ),
+    )
+    next_goal: str = Field(
+        ..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP"
+    )
 
 # ---------------------------------------------------------------------------
-# AGENT STEP OUTPUT (MAIN MODEL)
+# AGENT OUTPUT MODELS
 # ---------------------------------------------------------------------------
 
-class AgentStepOutput(BaseModel):
-    """Schema for the agent's per‑step output.
+class MemoryOutput(BaseModel):
+    summary: str = Field(..., description="Brief summary to remember for future steps.")
 
-    - ``current_state``: diagnostic information that supervisors/evaluators can use.
-    - ``action``: list of actions the agent should perform in order. Multiple actions
-      are allowed in a single step.
-    """
+    def __repr__(self) -> str:
+        non_none = self.model_dump(exclude_none=True)
+        field_strs = ", ".join(f"{k}={v!r}" for k, v in non_none.items())
+        return f"{self.__class__.__name__}({field_strs})"
+
+    @property
+    def content(self) -> str:
+        return self.model_dump_json(exclude_none=True, exclude_unset=True)
+
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        return self.model_dump(exclude_none=True, exclude_unset=True)
+
+class BrainOutput(BaseModel):
+    analysis: Analysis
     current_state: CurrentState
+
+    def __repr__(self) -> str:
+        non_none = self.model_dump(exclude_none=True)
+        field_strs = ", ".join(f"{k}={v!r}" for k, v in non_none.items())
+        return f"{self.__class__.__name__}({field_strs})"
+
+    @property
+    def content(self) -> str:
+        return self.model_dump_json(exclude_none=True, exclude_unset=True)
+
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        return self.model_dump(exclude_none=True, exclude_unset=True)
+
+class ActorOutput(BaseModel):
     action: List[ActionItem] = Field(
         ...,
         min_items=0,
-        max_items=10,                     # ← hard limit
-        description="Ordered list of 0-10 actions for this step."
+        max_items=10,
+        description="Ordered list of 0-10 actions for this step.",
     )
 
     def __repr__(self) -> str:
@@ -76,47 +110,33 @@ class AgentStepOutput(BaseModel):
 
     @property
     def content(self) -> str:
-        """
-        Returns a JSON-formatted string representation of the instance,
-        allowing access via the `.content` attribute.
-        """
         return self.model_dump_json(exclude_none=True, exclude_unset=True)
 
     @property
     def parsed(self) -> Dict[str, Any]:
-        """
-        Returns the dictionary representation of the instance,
-        facilitating direct access to structured data.
-        """
         return self.model_dump(exclude_none=True, exclude_unset=True)
 
-class PlannerOutput(BaseModel):
-    step_by_step_plan: Union[List[str], str] = Field(
-        ...,
-        description="Either an ordered plan (array) or the literal refusal sentence."
-    )
+class Step(BaseModel):
+    step_id: str = Field(..., pattern=r"^Step \d+$")
+    description: Optional[str]
 
-    @validator("step_by_step_plan")
-    def _validate_steps_or_refusal(cls, v):
-        if isinstance(v, list):
-            pat = re.compile(r"^Step \d+:")
-            for s in v:
-                if not pat.match(s):
-                    raise ValueError("Each entry must start with 'Step N: '.")
-        else:
-            if v.strip().upper() != "REFUSE TO MAKE PLAN":
-                raise ValueError(
-                    "If a string, it must be exactly 'REFUSE TO MAKE PLAN'."
-                )
-        return v
+class PlannerOutput(BaseModel):
+    step_by_step_plan: List[Step] = Field(
+        ...,
+        min_items=1,
+        description="Ordered high-level plan objects, each must start with 'Step N'.",
+    )
 
     @property
     def content(self) -> str:
-        return "\n".join(v for v in self.step_by_step_plan) \
-               if isinstance(self.step_by_step_plan, list) \
-               else self.step_by_step_plan
+        lines = []
+        for step in self.step_by_step_plan:
+            lines.append(f"{step.step_id}: {step.description}")
+        return "\n".join(lines)
 
 __all__ = [
-    "AgentStepOutput",
+    "BrainOutput",
+    "ActorOutput",
     "PlannerOutput",
+    "MemoryOutput",
 ]
