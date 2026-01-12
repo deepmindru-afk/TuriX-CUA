@@ -253,7 +253,7 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2025 Q4** | **✅ Planner** | Understands user intent and makes step-by-step plans to complete tasks |
 | **2025 Q4** | **✅ Multi-Agent Architecture** | Evaluate and guide each step in working |
 | **2025 Q4** | **✅ Duckduckgo Integration** | Speed up the information gathering process, for smarter planning (multi-agent branch) |
-| **2026 Q1** | **Ollama Support** | Support the Ollama Qwen3vl models |
+| **2026 Q1** | **✅ Ollama Support** | Support the Ollama Qwen3vl models |
 | **2026 Q1** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
 | **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
