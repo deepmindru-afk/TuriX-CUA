@@ -177,6 +177,7 @@ It must be valid JSON, so be careful with quotes and commas.
   Necessary information remembered CONTAINS THAT MESSAGE OR INFO.
   10. You should do the analyzation (including the user analyzation in the screenshot) in the analysis field.
   11. When you ask the actor to scroll down and you want to store the information in the screenshot, you need to write down in the next goal that you want the actor to record info, then scroll down.
+  12. If you find the information in the screenshot will help the later execution of the task, you need to write down in the next goal that you want the actor to record info, and what info to record.
 === ACTION-SPECIFIC REMINDERS ===
 - **Text Input:** Verify the insertion point is correct.
 - **Scrolling:** Confirm that scrolling completed.
