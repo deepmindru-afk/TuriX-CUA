@@ -112,10 +112,10 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 > **我们从不收集数据**——安装、授权，尽情折腾。
 
-> **0. Windows 用户**：请切换到 `windows` 分支获取 Windows 专属的安装与设置说明。
+> **0. Mac 用户**：请切换到 `multi-agent` 分支获取 multi-agent 架构在Mac电脑上的专属的安装与设置说明。
 >
 > ```bash
-> git checkout windows
+> git checkout multi-agent
 > ```
 
 

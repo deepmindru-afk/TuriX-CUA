@@ -45,7 +45,6 @@ Prefer your own model? **Change in `config.json` and go.**
 **December 30, 2025** - 🎉 Significant update in Agent Architecture. We introduce a multi-model architecture in the multi-agent branch, releasing the stress from a single model to multiple models.
 
 **October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across both **macOS** and **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
-
 Ready to level up? Update your `config.json` and start automating—happy hacking! 🎉
 
 **September 30, 2025** - 🎉 Exciting update! We've just released our latest AI model on the [TuriX API platform](https://turixapi.io), bringing enhanced performance, smarter reasoning, and seamless integration for even more powerful desktop automation. Developers and researchers, this is your cue—head over to the platform to access it now and elevate your workflows!
@@ -107,10 +106,10 @@ For more details, check our [report](https://turix.ai/technical-report/).
 
 > **We never collect data**—install, grant permissions, and hack away.
 
-> **0. Mac Users**: Switch to the `main` branch for MacOS-specific setup and installation instructions.
+> **0. Mac Users**: Switch to the `multi-agent` branch for MacOS-specific setup and installation instructions.
 >
 > ```bash
-> git checkout main
+> git checkout multi-agent
 > ```
 
 ### 1. Download the App
