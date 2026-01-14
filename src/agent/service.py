@@ -55,11 +55,26 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar('T', bound=BaseModel)
 
+TASK_ID_MAX_LEN = 60
+
 def screenshot_to_dataurl(screenshot):
     img_byte_arr = io.BytesIO()
     screenshot.save(img_byte_arr, format='PNG')
     base64_encoded = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
     return f'data:image/png;base64,{base64_encoded}'
+
+def _task_to_slug(task: str, max_len: int = TASK_ID_MAX_LEN) -> str:
+    task = task.strip().lower()
+    task = re.sub(r"[^a-z0-9]+", "-", task)
+    task = task.strip("-")
+    if not task:
+        task = "task"
+    return task[:max_len]
+
+def _default_agent_id(task: str, now: datetime) -> str:
+    date_str = now.strftime("%Y-%m-%d")
+    slug = _task_to_slug(task)
+    return f"{date_str}_{slug}"
 
 def _get_installed_app_names() -> list[str]:
     """
@@ -151,7 +166,7 @@ class Agent:
     ):
         self.current_time = datetime.now()
         self.wait_this_step = False
-        self.agent_id = agent_id or str(uuid.uuid4())
+        self.agent_id = agent_id or _default_agent_id(task, self.current_time)
         self.task = task
         self.original_task = task
         self.resume = resume
@@ -219,6 +234,8 @@ class Agent:
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
         self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
+        logger.info(f'Agent ID: {self.agent_id}')
+        logger.info(f'Agent memory path: {self.save_temp_file_path}')
         
 
     def _set_model_names(self) -> None:
@@ -281,7 +298,7 @@ class Agent:
         """
         if not self.save_temp_file_path:
             return
-        file_name = os.path.join(self.save_temp_file_path, f".jsonl")
+        file_name = os.path.join(self.save_temp_file_path, "memory.jsonl")
         if os.path.exists(file_name):
             with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
                 lines = f.readlines()
