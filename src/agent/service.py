@@ -5,7 +5,6 @@ import io
 import json
 import logging
 import os
-import uuid
 from pathlib import Path
 from typing import Any, Callable, Optional, Type, TypeVar
 import pyautogui
@@ -44,6 +43,21 @@ from src.agent.structured_llm import *
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T', bound=BaseModel)
+
+TASK_ID_MAX_LEN = 60
+
+def _task_to_slug(task: str, max_len: int = TASK_ID_MAX_LEN) -> str:
+    task = task.strip().lower()
+    task = re.sub(r"[^a-z0-9]+", "-", task)
+    task = task.strip("-")
+    if not task:
+        task = "task"
+    return task[:max_len]
+
+def _default_agent_id(task: str, now: datetime) -> str:
+    date_str = now.strftime("%Y-%m-%d")
+    slug = _task_to_slug(task)
+    return f"{date_str}_{slug}"
 
 def screenshot_to_dataurl(screenshot):
     img_byte_arr = io.BytesIO()
@@ -112,7 +126,7 @@ class Agent:
     ):
         self.current_time = datetime.now()
         self.wait_this_step = False
-        self.agent_id = agent_id or str(uuid.uuid4())
+        self.agent_id = agent_id or _default_agent_id(task, self.current_time)
         self.original_task = task
         self.task = task
         self.resume = resume
@@ -172,6 +186,8 @@ class Agent:
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
         self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
+        logger.info(f'Agent ID: {self.agent_id}')
+        logger.info(f'Agent memory path: {self.save_temp_file_path}')
 
     def _set_model_names(self) -> None:
         self.chat_model_library = self.llm.__class__.__name__
@@ -225,7 +241,7 @@ class Agent:
         """
         if not self.save_temp_file_path:
             return
-        file_name = os.path.join(self.save_temp_file_path, f"memory.jsonl")
+        file_name = os.path.join(self.save_temp_file_path, "memory.jsonl")
         if os.path.exists(file_name):
             with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
                 lines = f.readlines()

@@ -183,6 +183,23 @@ python examples/main.py
 
 **Enjoy hands‑free computing 🎉**
 
+#### 3.5 Resume a Terminated Task
+
+To resume a task after an interruption, set a stable `agent_id` and enable `resume` in `examples/config.json`:
+```json
+{
+    "agent": {
+         "resume": true,
+         "agent_id": "my-task-001"
+    }
+}
+```
+Notes:
+- Use the same `agent_id` as the run you want to resume.
+- Keep the same `task` when resuming.
+- Resume only works if prior memory exists at `src/agent/temp_files/<agent_id>/memory.jsonl`.
+- To start fresh, set `resume` to `false`, change `agent_id`, or delete `src/agent/temp_files/<agent_id>`.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
@@ -199,6 +216,7 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 
 | Quarter | Feature | Description |
 |---------|---------|-------------|
+| **2025 Q3** | **✅ Terminate and Resume** | Support resuming from terminated task. |
 | **2025 Q3** | **✅ Windows Support** | Cross-platform compatibility bringing TuriX automation to Windows environments *(Now Available)* |
 | **2025 Q3** | **✅ Enhanced MCP Integration** | Deeper Model Context Protocol support for seamless third-party agent connectivity *(Now Available)*|
 | **2025 Q4** | **✅ Next-Gen AI Model** | Significantly improved reasoning and task execution capabilities |
@@ -210,4 +228,3 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
 | **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
-

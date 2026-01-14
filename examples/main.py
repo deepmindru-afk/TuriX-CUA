@@ -197,6 +197,8 @@ def main(config_path: str = "config.json"):
         short_memory_len=agent_cfg.get("short_memory_len", 5),
         controller=controller,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 5),
+        resume=agent_cfg.get("resume", False),
+        agent_id=agent_cfg.get("agent_id"),
         save_conversation_path=agent_cfg.get("save_conversation_path"),
         save_conversation_path_encoding=agent_cfg.get("save_conversation_path_encoding", "utf-8"),
     )

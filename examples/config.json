@@ -22,6 +22,8 @@
     "short_memory_len": 5,
     "max_actions_per_step": 5,
     "max_steps": 100,
+    "resume": false,
+    "agent_id": null,
     "save_conversation_path": "llm_interactions.log",
     "save_conversation_path_encoding": "utf-8"
   }
