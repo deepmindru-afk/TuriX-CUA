@@ -2,9 +2,9 @@
    <img src="./doc/LogoHFitted.svg" width="1600" alt="TuriX 标志">
 </p>
 
-<h1 align="center">TuriX · AI 驱动的数字牛马</h1>
+<h1 align="center">TuriX · AI 驱动的桌面操作</h1>
 
-<p align="center"><strong>描述你的任务给你的电脑，以启动你的数字牛马。</strong></p>
+<p align="center"><strong>对电脑说话，看它工作。</strong></p>
 
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
@@ -22,10 +22,10 @@
 
 或通过邮件联系我们：contact@turix.ai
 
-TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
-它内置 **最先进的计算机使用Agent**（在我们的内部电脑操作测试集中通过率 > 68%），同时保持 100% 开源，并对个人与科研用途免费。
+TuriX 让强大的 AI 模型能在你的桌面上真正动手操作。
+它内置 **最先进的计算机使用 Agent**（在我们内部的 OSWorld 风格测试集中通过率 > 68%），同时保持 100% 开源，并对个人与科研用途免费。
 
-想用你自己的模型？**在 `config.json` 中切换即可。**
+想用你自己的模型？**在 `config.json` 中切换即可开始。**
 
 ## 目录
 - [📞 联系方式与社区](#contact-community)
@@ -47,7 +47,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 ## <a id="latest-news"></a>📰 最新动态
 
-**2025 年 12 月 30 日** - 🎉Agent架构迎来重要更新。我们在 multi-agent 分支引入多模型架构，将单一模型的压力分散到多个模型上，以减轻注意力机制的负担。
+**2025 年 12 月 30 日** - 🎉 Agent 架构迎来重要更新。我们在 multi-agent 分支引入多模型架构，将单一模型的压力分散到多个模型上。
 
 **2025 年 10 月 16 日** - 🚀 自动化爱好者的重大消息！TuriX 现已全面支持前沿的 **Qwen3-VL** 视觉语言模型，赋能 **macOS** 与 **Windows** 的顺畅自动化。基于我们的内部基准，该集成在复杂 UI 交互上可将成功率提升多达 15%。无论你是在脚本化日常流程还是处理复杂项目，Qwen3-VL 的多模态推理都能带来前所未有的精度。
 
@@ -55,7 +55,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 准备好体验了吗？更新你的 `config.json` 并开始自动化吧——祝你玩得开心！🎉
 
-*欢迎关注我们的 [Discord](https://discord.gg/vkEYj4EV2n) 获取使用技巧、用户故事以及后续的 重磅发布。*
+*欢迎关注我们的 [Discord](https://discord.gg/vkEYj4EV2n) 获取使用技巧、用户故事以及后续的重磅发布。*
 
 ---
 
@@ -93,15 +93,15 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 ## <a id="key-features"></a>✨ 关键特性
 | 能力 | 含义 |
 |------------|---------------|
-| **SOTA 默认模型** | 在 Mac 上的成功率和速度上超越此前的开源Agent（如 UI‑TARS） |
+| **SOTA 默认模型** | 在 Mac 上的成功率和速度上超越此前的开源 Agent（如 UI‑TARS） |
 | **无需应用专用 API** | 只要人能点，TuriX 就能点——WhatsApp、Excel、Outlook、内部工具… |
 | **可热插拔的「大脑」** | 无需改代码即可替换 VLM 策略（`config.json`） |
-| **MCP 就绪** | 可接入 *Claude for Desktop* 或 **任何** 支持 Model Context Protocol (MCP) 的Agent |
+| **MCP 就绪** | 可接入 *Claude for Desktop* 或 **任何** 支持 Model Context Protocol (MCP) 的 Agent |
 
 ---
 ## <a id="model-performance"></a>📊 模型性能
 
-我们Agent在桌面自动化任务上达到了业界领先的表现：
+我们的 Agent 在桌面自动化任务上达到了业界领先的表现：
 <p align="center">
    <img src="./doc/performance_sum.jpg" width="1600" alt="TuriX 性能">
 </p>
@@ -148,13 +148,15 @@ pip install -r requirements.txt
 ##### 触发权限对话框（每个 shell 运行一次）
 ```
 # macOS 终端
-osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering accessibility request")" in document 1'
+osascript -e 'tell application "Safari" \
+to do JavaScript "alert(\"Triggering accessibility request\")" in document 1'
 
 # VS Code 集成终端（重复一次以授权 VS Code）
-osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering accessibility request")" in document 1'
+osascript -e 'tell application "Safari" \
+to do JavaScript "alert(\"Triggering accessibility request\")" in document 1'
 ```
 
-> **在每个弹窗中点击“允许”**，这样Agent才能驱动 Safari。
+> **在每个弹窗中点击“允许”**，这样 Agent 才能驱动 Safari。
 
 ### <a id="configure-run"></a>4. 配置并运行
 
@@ -210,7 +212,7 @@ if provider == "name_you_want":
 ```
 请根据你的 LLM 在 ChatOpenAI、ChatGoogleGenerativeAI、ChatAnthropic 或 ChatOllama 之间切换，并修改对应的模型名称。
 
-#### 4.4 启动Agent
+#### 4.4 启动 Agent
 
 ```bash
 python examples/main.py
@@ -242,6 +244,7 @@ python examples/main.py
 | **2025 Q4** | **✅ 多智能体架构** | 评估并指导每一步执行 |
 | **2025 Q4** | **✅ Duckduckgo 集成** | 加速信息收集，提升规划效果（multi-agent 分支） |
 | **2026 Q1** | **✅ Ollama 支持** | 支持 Ollama Qwen3vl 模型 |
+| **2026 Q1** | **可恢复的内存压缩** | 推进内存管理机制，稳定性能 |
 | **2026 Q1** | **工作流自动化** | 记录、编辑并回放复杂多步自动化序列 |
 | **2026 Q1** | **离线模型选项** | 完全本地推理，最大化隐私且不依赖 API |
 | **2026 Q1** | **持久记忆** | 学习用户偏好并跨会话保留任务历史 |
