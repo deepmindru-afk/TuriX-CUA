@@ -225,7 +225,7 @@ class Agent:
         """
         if not self.save_temp_file_path:
             return
-        file_name = os.path.join(self.save_temp_file_path, f".jsonl")
+        file_name = os.path.join(self.save_temp_file_path, f"memory.jsonl")
         if os.path.exists(file_name):
             with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
                 lines = f.readlines()
