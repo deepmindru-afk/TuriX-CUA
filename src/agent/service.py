@@ -280,7 +280,7 @@ class Agent:
         """Load the current memory from a file."""
         if not self.save_temp_file_path:
             return
-        file_name = os.path.join(self.save_temp_file_path, ".jsonl")
+        file_name = os.path.join(self.save_temp_file_path, "memory.jsonl")
         if os.path.exists(file_name):
             with open(file_name, "r", encoding=self.save_brain_conversation_path_encoding) as f:
                 lines = f.readlines()
