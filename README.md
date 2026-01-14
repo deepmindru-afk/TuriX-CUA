@@ -253,8 +253,9 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2025 Q4** | **✅ Multi-Agent Architecture** | Evaluate and guide each step in working |
 | **2025 Q4** | **✅ Duckduckgo Integration** | Speed up the information gathering process, for smarter planning (multi-agent branch) |
 | **2026 Q1** | **✅ Ollama Support** | Support the Ollama Qwen3vl models |
+| **2026 Q1** | **Recoverable Memory Compression** | Advance memory management mechanism to stabelize performance |
+| **2026 Q1** | **Offline Model Option** | Fully local TuriX model for maximum privacy and zero cloud API dependency |
 | **2026 Q1** | **Workflow Automation** | Record, edit, and replay complex multi-step automation sequences |
-| **2026 Q1** | **Offline Model Option** | Fully local inference for maximum privacy and zero API dependency |
-| **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
+| **2026 Q2** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
 | **2026 Q2** | **Windows-Optimized Model** | Native Windows model architecture for superior performance on Microsoft platforms |
