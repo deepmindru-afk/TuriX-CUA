@@ -49,6 +49,23 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
+TASK_ID_MAX_LEN = 60
+
+
+def _task_to_slug(task: str, max_len: int = TASK_ID_MAX_LEN) -> str:
+    task = task.strip().lower()
+    task = re.sub(r"[^a-z0-9]+", "-", task)
+    task = task.strip("-")
+    if not task:
+        task = "task"
+    return task[:max_len]
+
+
+def _default_agent_id(task: str, now: datetime) -> str:
+    date_str = now.strftime("%Y-%m-%d")
+    slug = _task_to_slug(task)
+    return f"{date_str}_{slug}"
+
 
 def screenshot_to_dataurl(screenshot):
     img_byte_arr = io.BytesIO()
@@ -130,7 +147,8 @@ class Agent:
         agent_id: Optional[str] = None,
     ):
         self.wait_this_step = False
-        self.agent_id = agent_id or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.current_time = datetime.now()
+        self.agent_id = agent_id or _default_agent_id(task, self.current_time)
         self.task = task
         self.memory_budget = memory_budget
         self.original_task = task
@@ -196,6 +214,8 @@ class Agent:
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
         self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
+        logger.info("Agent ID: %s", self.agent_id)
+        logger.info("Agent memory path: %s", self.save_temp_file_path)
 
     def _setup_action_models(self) -> None:
         """Setup dynamic action models from controller's registry"""

@@ -254,6 +254,23 @@ python examples/main.py
 
 **享受免手操作的计算体验 🎉**
 
+#### 4.5 恢复已中断的任务
+
+如果任务中断，想从上次位置继续，请在 `examples/config.json` 中设置固定的 `agent_id` 并开启 `resume`：
+```json
+{
+    "agent": {
+         "resume": true,
+         "agent_id": "my-task-001"
+    }
+}
+```
+注意：
+- 使用与你要恢复的运行相同的 `agent_id`。
+- 恢复时请保持同一个 `task`。
+- 只有在 `src/agent/temp_files/<agent_id>/memory.jsonl` 已存在时才会生效。
+- 想重新开始：将 `resume` 设为 `false`、更换 `agent_id`，或删除 `src/agent/temp_files/<agent_id>`。
+
 ## <a id="contributing"></a>🤝 贡献指南
 
 我们欢迎贡献！请阅读我们的 [Contributing Guide](CONTRIBUTING.MD) 了解如何开始。
@@ -270,6 +287,7 @@ python examples/main.py
 
 | 季度 | 功能 | 描述 |
 |---------|---------|-------------|
+| **2025 Q3** | **✅ 终止与恢复** | 支持从已终止的任务恢复 |
 | **2025 Q3** | **✅ Windows 支持** | 跨平台兼容，把 TuriX 自动化带到 Windows 环境（现已可用） |
 | **2025 Q3** | **✅ 增强的 MCP 集成** | 更深度的 Model Context Protocol 支持，第三方Agent连接更顺畅（现已可用）|
 | **2025 Q4** | **✅ 下一代 AI 模型** | 大幅提升点击准确率和任务执行能力 |
