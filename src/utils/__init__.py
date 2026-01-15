@@ -4,13 +4,11 @@ from functools import wraps
 from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
 import oss2
 import os
-from oss2 import Auth,Bucket
+from oss2 import Auth, Bucket
 from io import BytesIO
 from datetime import datetime
 logger = logging.getLogger(__name__)
 
-
-# Define generic type variables for return type and parameters
 R = TypeVar('R')
 P = ParamSpec('P')
 
@@ -46,7 +44,6 @@ def time_execution_async(
 
 	return decorator
 
-
 def singleton(cls):
 	instance = [None]
 	def wrapper(*args, **kwargs):
@@ -55,5 +52,3 @@ def singleton(cls):
 		return instance[0]
 
 	return wrapper
-
-

@@ -117,8 +117,11 @@ class OutputSchemas:
                         # ----- memory + wait -----
                         "record_info": {
                             "type": "object",
-                            "properties": {"text": {"type": "string"}},
-                            "required": ["text"],
+                            "properties": {
+                                "text": {"type": "string"},
+                                "file_name": {"type": "string"},
+                            },
+                            "required": ["text", "file_name"],
                         },
                         "wait": {"type": "object", "properties": {"text": {"type": "string"}}},
                     },
@@ -138,24 +141,47 @@ class OutputSchemas:
     }
 
     BRAIN_SCHEMA = {
-        "type": "object",
-        "properties": {
-            "analysis": {
-                "type": "object",
-                "properties": {"analysis": {"type": "string"}},
-                "required": ["analysis"],
-            },
-            "current_state": {
+        "oneOf": [
+            {
                 "type": "object",
                 "properties": {
-                    "step_evaluate": {"type": "string"},
-                    "ask_human": {"type": "string"},
-                    "next_goal": {"type": "string"},
+                    "analysis": {
+                        "type": "object",
+                        "properties": {"analysis": {"type": "string"}},
+                        "required": ["analysis"],
+                    },
+                    "current_state": {
+                        "type": "object",
+                        "properties": {
+                            "step_evaluate": {"type": "string"},
+                            "ask_human": {"type": "string"},
+                            "next_goal": {"type": "string"},
+                        },
+                        "required": ["step_evaluate", "ask_human", "next_goal"],
+                    },
                 },
-                "required": ["step_evaluate", "ask_human", "next_goal"],
+                "required": ["analysis", "current_state"],
+                "additionalProperties": False,
             },
-        },
-        "required": ["analysis", "current_state"],
+            {
+                "type": "object",
+                "properties": {
+                    "read_files": {
+                        "type": "object",
+                        "properties": {
+                            "files": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                            }
+                        },
+                        "required": ["files"],
+                    }
+                },
+                "required": ["read_files"],
+                "additionalProperties": False,
+            },
+        ]
     }
 
     BRAIN_RESPONSE_FORMAT = {

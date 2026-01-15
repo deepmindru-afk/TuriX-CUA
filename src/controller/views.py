@@ -14,7 +14,8 @@ class InputTextAction(BaseModel):
 
 class RecordAction(BaseModel):
 	text: str = Field(..., description="information you need to record")
-	
+	file_name: str = Field(..., description="filename summary for the recorded info")
+
 class OpenAppAction(BaseModel):
 	app_name: str
 

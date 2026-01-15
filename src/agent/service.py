@@ -38,6 +38,8 @@ from src.agent.views import (
     AgentStepInfo,
     AgentBrain,
 )
+from src.utils.record_store import RecordStore
+from src.utils.brain_search import BrainSearchFlow
 from src.agent.planner_service import Planner
 from src.controller.service import Controller
 from src.utils import time_execution_async
@@ -214,6 +216,12 @@ class Agent:
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
         self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
+        self.record_dir = os.path.join(self.save_temp_file_path, "records")
+        self.record_store = RecordStore(
+            self.record_dir,
+            encoding=self.save_brain_conversation_path_encoding or "utf-8",
+        )
+        self.brain_search = BrainSearchFlow(self.record_store)
         logger.info("Agent ID: %s", self.agent_id)
         logger.info("Agent memory path: %s", self.save_temp_file_path)
 
@@ -332,49 +340,77 @@ class Agent:
                 screenshot_dataurl = screenshot_to_dataurl(self.screenshot_annotated)
             if self.previous_screenshot:
                 previous_screenshot_dataurl = screenshot_to_dataurl(self.previous_screenshot)
+            info_files = "\n".join(str(item) for item in self.infor_memory) if self.infor_memory else "None"
 
-            if step_id >= 2:
-                state_content = [
-                    {
-                        "type": "text",
-                        "content": (
-                            f"Previous step is {prev_step_id}.\n\n"
-                            f"Necessary information remembered is:\n{self.infor_memory}\n\n"
-                            f"Previous Actions Short History:\n{self.brain_memory}\n\n"
-                        ),
-                    }
-                ]
-                if previous_screenshot_dataurl:
+            def build_state_content(
+                read_files_content: Optional[str] = None,
+                read_files_list: Optional[list[str]] = None,
+            ) -> list[dict]:
+                if step_id >= 2:
+                    state_content = [
+                        {
+                            "type": "text",
+                            "content": (
+                                f"Previous step is {prev_step_id}.\n\n"
+                                f"Recorded info files (filenames only):\n{info_files}\n\n"
+                                f"Previous Actions Short History:\n{self.brain_memory}\n\n"
+                            ),
+                        }
+                    ]
+                else:
+                    state_content = [
+                        {
+                            "type": "text",
+                            "content": (
+                                "This is the first step.\n\n"
+                                "You should provide a JSON with a well-defined goal based on images information. "
+                                "The other fields should be default value."
+                            ),
+                        }
+                    ]
+                if read_files_content:
+                    files_label = ", ".join(read_files_list) if read_files_list else ""
+                    read_label = (
+                        f"Requested file contents for: {files_label}\n" if files_label else "Requested file contents:\n"
+                    )
                     state_content.append(
-                        {"type": "image_url", "image_url": {"url": previous_screenshot_dataurl}}
+                        {
+                            "type": "text",
+                            "content": f"{read_label}{read_files_content}",
+                        }
+                    )
+                if step_id >= 2 and previous_screenshot_dataurl:
+                    state_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": previous_screenshot_dataurl},
+                        }
                     )
                 if screenshot_dataurl:
-                    state_content.append({"type": "image_url", "image_url": {"url": screenshot_dataurl}})
-            else:
-                state_content = [
-                    {
-                        "type": "text",
-                        "content": (
-                            "This is the first step.\n\n"
-                            "You should provide a JSON with a well-defined goal based on images information. "
-                            "The other fields should be default value."
-                        ),
-                    }
-                ]
-                if screenshot_dataurl:
-                    state_content.append({"type": "image_url", "image_url": {"url": screenshot_dataurl}})
+                    state_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": screenshot_dataurl},
+                        }
+                    )
+                return state_content
 
+            state_content = build_state_content()
             self.brain_message_manager._remove_last_state_message()
             self.brain_message_manager._remove_last_AIntool_message()
             self.brain_message_manager.add_state_message(state_content)
             brain_messages = self.brain_message_manager.get_messages()
 
             response = await self.brain_llm.ainvoke(brain_messages)
-            brain_text = str(response.content)
-            cleaned_brain_response = re.sub(r"^```(json)?", "", brain_text.strip())
-            cleaned_brain_response = re.sub(r"```$", "", cleaned_brain_response).strip()
-            logger.debug("[Brain] Raw text: %s", cleaned_brain_response)
-            parsed = json.loads(cleaned_brain_response)
+            parsed = self.brain_search.parse_response(str(response.content))
+            parsed, brain_messages = await self.brain_search.maybe_reinvoke(
+                parsed,
+                build_state_content,
+                self.brain_message_manager,
+                self.brain_llm,
+            )
+            if "current_state" not in parsed or "analysis" not in parsed:
+                raise ValueError("Brain response missing required fields after read-files handling.")
             self._save_brain_conversation(brain_messages, parsed, step=self.n_steps)
             self.brain_context[self.n_steps] = parsed
             self.next_goal = parsed["current_state"]["next_goal"]
@@ -394,13 +430,13 @@ class Agent:
         prev_step_id = step_id - 1
         try:
             self.save_memory()
-
+            info_files = "\n".join(str(item) for item in self.infor_memory) if self.infor_memory else "None"
             if self.n_steps >= 2:
                 state_content = [
                     {
                         "type": "text",
                         "content": (
-                            f"Necessary information remembered is: {self.infor_memory}\n\n"
+                            f"Recorded info files (filenames only): {info_files}\n\n"
                             f"Analysis to the current screen is: {self.brain_thought}.\n\n"
                             f"Your goal to achieve in this step is: {self.next_goal}\n\n"
                         ),
@@ -511,13 +547,26 @@ class Agent:
         record = str(response.content)
 
         output_dict = json.loads(record)
-        for i in range(len(output_dict["action"])):
-            outer_key = list(output_dict["action"][i].keys())[0]
-            inner_value = output_dict["action"][i][outer_key]
-            if outer_key == "record_info":
-                information_stored = inner_value.get("text", "None")
-                self.infor_memory.append({f"Step {self.n_steps}, the information stored is: {information_stored}"})
-        parsed: AgentOutput | None = AgentOutput(action=output_dict["action"])
+        normalized_actions = []
+        for action in output_dict.get("action", []):
+            if not isinstance(action, dict) or not action:
+                normalized_actions.append(action)
+                continue
+            outer_key = list(action.keys())[0]
+            inner_value = action[outer_key] if isinstance(action, dict) else {}
+            if outer_key == "record_info" and isinstance(inner_value, dict):
+                information_stored = inner_value.get("text", "")
+                file_name = inner_value.get("file_name", "")
+                saved_name = self.record_store.save(
+                    information_stored,
+                    file_name,
+                    screenshot=self.screenshot_annotated,
+                    step=self.n_steps,
+                )
+                if saved_name and saved_name not in self.infor_memory:
+                    self.infor_memory.append(saved_name)
+            normalized_actions.append(action)
+        parsed: AgentOutput | None = AgentOutput(action=normalized_actions)
 
         self._log_response(parsed)
         return parsed, record

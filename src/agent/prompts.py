@@ -33,7 +33,7 @@ class SystemPrompt:
     "current_state": {{
         "evaluation_previous_goal": "Success/Failed",
         "next_goal": "Goal of this step based on \"actions\", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
-        "information_stored": "Accumulated important information, add continuously, else 'None'",
+        "information_stored": "Filenames of recorded info only (concise .txt names), else 'None'",
     }},
     "action": [List of all actions to be executed this step]
 }}
@@ -57,6 +57,10 @@ class SystemPrompt:
 **Open App**
 - **Must** use the `open_app` action to open initial app or switch apps even you can click on it.
 - The apps you can open in this environment are: {', '.join(list_applications())}.
+
+**information_stored**
+- Store important information using the dummy action `record_info`.
+- When recording, you must provide both `text` and `file_name`. The `file_name` must be a short summary ending in `.txt` (no path).
             """
         )
 
@@ -80,6 +84,7 @@ SYSTEM PROMPT FOR BRAIN MODEL:
 - You will also receive 1-2 images, if you receive 2 images, the first one is the screenshot before last action, the second one is the screenshot you need to analyze for this step.
 - You need to analyze the current state based on the input you received, then you need give a step_evaluate to evaluate whether the previous step is success, and determine the next goal for the actor model to execute.
 - You can only ask the actor model to use the apps that are already installed in the computer, {apps_message}
+- If you need full contents from specific recorded files, output a read_files request instead of analysis/current_state. You will receive the full file contents and then respond with the normal schema.
 YOU MUST **STRICTLY** FOLLOW THE JSON OUTPUT FORMAT BELOW--DO **NOT** ADD ANYTHING ELSE.
 It must be valid JSON, so be careful with quotes and commas.
 - Always adhere strictly to JSON output format:
@@ -92,6 +97,12 @@ It must be valid JSON, so be careful with quotes and commas.
     "ask_human": "Describe what you want user to do or No (No if nothing to ask for confirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or confirm preference.)",
     "next_goal": "Goal of this step to achieve the task, ONLY DESCRIBE THE EXPECTED RESULT OF THIS STEP"
 }}
+}}
+OR (for read files only):
+{{
+  "read_files": {{
+    "files": ["file_a.txt", "file_b.txt"]
+  }}
 }}
 === ROLE-SPECIFIC DIRECTIVES ===
 - Role: Brain Model for Windows 11 Agent. Determine the state and next goal based on the plan. Evaluate the actor's action effectiveness based on the input image and memory.
@@ -110,8 +121,8 @@ It must be valid JSON, so be careful with quotes and commas.
   9. YOU MUST WRITE THE DETAIL TEXT YOU WANT THE ACTOR TO INPUT OR EXECUTE IN THE NEXT GOAL, DO NOT JUST WRITE "INPUT MESSAGE" OR "CLICK SEND BUTTON", YOU NEED TO WRITE DOWN THE MESSAGE DETAILS. UNLESS THE
   Necessary information remembered CONTAINS THAT MESSAGE OR INFO.
   10. You should do the analyzation (including the user analyzation in the screenshot) in the analysis field.
-  11. When you ask the actor to scroll down and you want to store the information in the screenshot, you need to write down in the next goal that you want the actor to record info, then scroll down.
-  12. If you find the information in the screenshot will help the later execution of the task, you need to write down in the next goal that you want the actor to record info, and what info to record.
+  11. When you ask the actor to scroll down and you want to store the information in the screenshot, you need to write down in the next goal that you want the actor to record_info (with a short `file_name`), then scroll down.
+  12. If you find the information in the screenshot will help the later execution of the task, you need to write down in the next goal that you want the actor to record_info (with a short `file_name`), and what info to record.
 === ACTION-SPECIFIC REMINDERS ===
 - **Text Input:** Verify the insertion point is correct.
 - **Scrolling:** Confirm that scrolling completed.
@@ -151,8 +162,8 @@ WHEN OUTPUTTING MULTIPLE ACTIONS AS A LIST, EACH ACTION MUST BE AN OBJECT.
 - Responsibilities:
   1. Follow the next_goal precisely using available actions:
 {self.action_descriptions}
-  2. If the next goal involves the intention to store information, you must output the action "record_info" in the action field.
-  3. When the next goal involves analyzing the user information, you must output a record_info action with a detail analysis base on the screenshot, brain's analysis and the stored information.
+  2. If the next goal involves the intention to store information, you must output the action "record_info" with both `text` and `file_name`.
+  3. When the next goal involves analyzing the user information, you must output a record_info action with a detailed analysis based on the screenshot, brain's analysis, and the stored information. The `file_name` should be a short summary ending in `.txt`.
             """
         )
 
@@ -190,10 +201,19 @@ class AgentMessagePrompt:
         max_error_length: int = 400,
         step_info: Optional[AgentStepInfo] = None,
     ):
-        text_item = next(item for item in state_content if item["type"] == "text")
-        image_items = [item["image_url"]["url"] for item in state_content if item["type"] == "image_url"]
+        # Collect all text items in order and keep all images.
+        text_items = [
+            item.get("content") or item.get("text", "")
+            for item in state_content
+            if item.get("type") == "text"
+        ]
+        image_items = [
+            item["image_url"]["url"]
+            for item in state_content
+            if item.get("type") == "image_url"
+        ]
 
-        self.state = text_item["content"]
+        self.state = "\n\n".join([t for t in text_items if t])
         self.image_urls = image_items
         self.result = result
         self.max_error_length = max_error_length

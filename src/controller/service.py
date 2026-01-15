@@ -235,10 +235,10 @@ class Controller:
 			
 		@self.registry.action(
 			'Tell the short memory that you are recording information',
-			param_model=RecordAction
+			param_model=RecordAction,
 		)
-		async def record_info(text: str):
-			return ActionResult(extracted_content=f'{text}')
+		async def record_info(text: str, file_name: str):
+			return ActionResult(extracted_content=f'{file_name}: {text}')
 		
 		@self.registry.action(
 			'Wait',

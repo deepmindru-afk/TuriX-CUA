@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from src.controller.views import *
 
 # ---------------------------------------------------------------------------
@@ -9,7 +9,7 @@ from src.controller.views import *
 
 class ActionItem(BaseModel):
     """Exactly one of the fields must be populated to specify the concrete action."""
-    model_config = ConfigDict(exclude_none=True)
+    model_config = ConfigDict(exclude_none=True, populate_by_name=True)
     done: Optional[NoParamsAction] = None
     input_text: Optional[InputTextAction] = None
     open_app: Optional[OpenAppAction] = None
@@ -58,6 +58,9 @@ class CurrentState(BaseModel):
         ..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP"
     )
 
+class ReadFilesRequest(BaseModel):
+    files: List[str] = Field(..., description="Recorded info filenames to read.")
+
 # ---------------------------------------------------------------------------
 # AGENT OUTPUT MODELS
 # ---------------------------------------------------------------------------
@@ -79,8 +82,19 @@ class MemoryOutput(BaseModel):
         return self.model_dump(exclude_none=True, exclude_unset=True)
 
 class BrainOutput(BaseModel):
-    analysis: Analysis
-    current_state: CurrentState
+    analysis: Optional[Analysis] = None
+    current_state: Optional[CurrentState] = None
+    read_files: Optional[ReadFilesRequest] = None
+
+    @model_validator(mode="after")
+    def validate_output(self) -> "BrainOutput":
+        if self.read_files:
+            if self.analysis or self.current_state:
+                raise ValueError("Read-files output must not include analysis or current_state.")
+        else:
+            if not (self.analysis and self.current_state):
+                raise ValueError("analysis and current_state are required when read_files is not requested.")
+        return self
 
     def __repr__(self) -> str:
         non_none = self.model_dump(exclude_none=True)
