@@ -268,11 +268,10 @@ class Agent:
         Update memory content.
         """
         sorted_steps = sorted(self.brain_context.keys(), reverse=True)
-        logger.debug("all memory: %s", self.brain_context)
         current_state = self.brain_context[sorted_steps[0]]["current_state"] if sorted_steps else None
-        logger.debug("current_state: %s", current_state)
+        # logger.debug("current_state: %s", current_state)
         step_goal = current_state["next_goal"] if current_state else None
-        logger.debug("step_goal: %s", step_goal)
+        # logger.debug("step_goal: %s", step_goal)
         evaluation = current_state["step_evaluate"] if current_state else None
 
         if len(self.brain_memory) > self.memory_budget:
