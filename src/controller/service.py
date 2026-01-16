@@ -146,8 +146,10 @@ class Controller:
 	def __init__(
 		self,
 		exclude_actions: list[str] = [],
+		use_ui: bool = True,
 	):
 		self.exclude_actions = exclude_actions
+		self.use_ui = use_ui
 		self.registry = Registry(exclude_actions)
 		self._register_default_actions()
 		self.mac_tree_builder = MacUITreeBuilder()
@@ -200,6 +202,10 @@ class Controller:
 
 			# Give macOS time to start the app
 			await asyncio.sleep(1)
+			if not self.use_ui:
+				success_msg = f"✅ Launched {user_input}"
+				logger.info("Skipping PID lookup because use_ui is disabled.")
+				return ActionResult(extracted_content=success_msg)
 			pid = None
 			# check if the pid is an integer or a string of integer
 			if isinstance(pid, str) and pid.isdigit():

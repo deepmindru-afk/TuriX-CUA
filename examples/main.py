@@ -125,6 +125,10 @@ def main(config_path: str = "config.json"):
     planner_llm = build_llm(cfg["planner_llm"])
     agent_cfg = cfg["agent"]
     controller = Controller()
+    save_llm_conversation_path = agent_cfg.get("save_llm_conversation_path")
+    save_llm_conversation_path_encoding = agent_cfg.get(
+        "save_llm_conversation_path_encoding", "utf-8"
+    )
 
     agent = Agent(
         task                    = agent_cfg["task"],
@@ -137,8 +141,8 @@ def main(config_path: str = "config.json"):
         max_actions_per_step    = agent_cfg.get("max_actions_per_step", 5),
         resume                  = agent_cfg.get("resume", False),
         agent_id                = agent_cfg.get("agent_id"),
-        save_conversation_path  = agent_cfg.get("save_conversation_path"),
-        save_conversation_path_encoding = agent_cfg.get("save_conversation_path_encoding", "utf-8"),
+        save_llm_conversation_path = save_llm_conversation_path,
+        save_llm_conversation_path_encoding = save_llm_conversation_path_encoding,
     )
 
     async def runner():
