@@ -3,28 +3,28 @@
 
   "llm": {
     "provider": "turix",
-    "model_name": "turix-model",
     "api_key": "your_api_key_here",
-    "base_url": "https://llm.turixapi.io/v1" 
+    "base_url": "https://llm.turixapi.io/v1",
+    "model_name": "turix-model"
   },
 
   "planner_llm": {
     "provider": "turix",
-    "model_name": "turix-planner-model",
     "api_key": "your_api_key_here",
-    "base_url": "https://llm.turixapi.io/v1" 
+    "base_url": "https://llm.turixapi.io/v1",
+    "model_name": "turix-model"
   },
 
   "agent": {
     "task": "open Chrome, go to github, and search for turix-cua in the github webpage. Enter the TuriX-CUA repository, and star it.",
-    "short_memory_len": 5,
     "use_ui": false,
+    "use_planner": false,
     "max_actions_per_step": 5,
     "max_steps": 100,
     "use_turix": true,
     "resume": false,
     "agent_id": null,
-    "save_conversation_path": "llm_interactions.log",
-    "save_conversation_path_encoding": "utf-8"
+    "save_llm_conversation_path": "llm_interactions.txt",
+    "save_llm_conversation_path_encoding": "utf-8"
   }
 }
