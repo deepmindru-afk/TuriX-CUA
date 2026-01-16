@@ -121,9 +121,10 @@ def main(config_path: str = "config.json"):
         sys.exit(1)
 
     # --- Build LLM & Agent --------------------------------------------------
-    llm = build_llm(cfg["llm"])
-    planner_llm = build_llm(cfg["planner_llm"])
     agent_cfg = cfg["agent"]
+    llm = build_llm(cfg["llm"])
+    use_planner = agent_cfg.get("use_planner", True)
+    planner_llm = build_llm(cfg["planner_llm"]) if use_planner else None
     controller = Controller()
     save_llm_conversation_path = agent_cfg.get("save_llm_conversation_path")
     save_llm_conversation_path_encoding = agent_cfg.get(
