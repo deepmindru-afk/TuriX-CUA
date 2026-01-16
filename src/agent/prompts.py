@@ -268,15 +268,17 @@ SYSTEM_PROMPT_FOR_PLANNER
         "current_iteration": i,
         "total_iterations": times you need to repeat,
     }},
+    "search_summary": "Concise summary of the most relevant search findings (empty string if none).",
     "step_by_step_plan": [
-        {{ "step_id": "Step 1", "description": "[Goal Description]" }},
-        {{ "step_id": "Step 2", "description": "[Goal Description]" }},
-        {{ "step_id": "Step N", "description": "[Goal Description]" }}
+        {{ "step_id": "Step 1", "description": "[Goal Description]", "important_search_info": "[Relevant search info for this step or empty string]" }},
+        {{ "step_id": "Step 2", "description": "[Goal Description]", "important_search_info": "[Relevant search info for this step or empty string]" }},
+        {{ "step_id": "Step N", "description": "[Goal Description]", "important_search_info": "[Relevant search info for this step or empty string]" }}
     ]
 }}
 - **Output Format for Multi-turn Repetitive Tasks:** Same JSON structure as above, but with total_iterations > 1. In the first turn (initial task), set current_iteration=1 and output the plan for the FIRST instance/item only. In subsequent turns, the human message will specify the previous completed iteration (e.g., "Continue: previous iteration X completed, summary: [brief what was done], original task: [reminder]"), then set current_iteration = previous + 1 and output the plan ONLY for that specific next instance/item.
 - **IMPORTANT STEP ID FORMAT**: Each step in `step_by_step_plan` must have `step_id` as "Step X" starting from 1 (reset per iteration).
 - **IMPORTANT DESCRIPTION CONTENT**: Descriptions must be concise, high-level goals in English, no low-level details (e.g., no keystrokes, clicks). Focus on achieving the step's goal for the CURRENT iteration's specific item/instance.
+- **SEARCH INFO FIELDS**: If no search was used or no relevant findings, set `search_summary` and each `important_search_info` to an empty string.
 === MULTI-TURN REPETITIVE TASK HANDLING ===
 - **Detect Repetition:** If the task involves repeating similar actions for multiple distinct items (e.g., "download 5 images: url1,url2,..."; "send message to 3 people: Alice, Bob, Charlie"), calculate total_iterations = number of items/instances.
 - **First Turn (Initial Message):**

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from typing import List, Optional
 
 from dotenv import load_dotenv
@@ -58,27 +59,25 @@ class Planner:
 
     async def _decide_search_queries(self) -> List[str]:
         """
-        Ask the planner model (raw, unstructured) to propose diverse search queries.
-        Falls back to curated defaults when a helper LLM is unavailable.
+        Ask the planner model (raw, unstructured) whether search is needed and,
+        if so, propose search queries. If no usable queries are provided, skip search.
         """
         if not self.use_search:
             return []
 
-        fallback_queries = [
-            "TuriX computer use agent capabilities",
-            "AI agent automate computer tasks Windows",
-        ]
         if not self.search_llm:
-            return fallback_queries
+            return []
 
         try:
             prompt = SystemMessage(
                 content=(
-                    "Generate 3-6 concise web search queries for background research. "
-                    "Cover: TuriX capabilities/value, AI computer-use agents. "
+                    "Decide whether web search is necessary to complete the user's task. "
+                    "If search is not needed, respond with JSON: "
+                    "{\"use_search\": false, \"queries\": []}. "
+                    "If search is needed, respond with JSON: "
+                    "{\"use_search\": true, \"queries\": [\"query1\", \"query2\"]}. "
                     "Keep each query under 12 words, prefer English, avoid copying the whole user task text, "
-                    "and ensure the set is diverse (no near-duplicates). "
-                    "Respond strictly as a JSON array of strings."
+                    "and ensure the set is diverse (no near-duplicates)."
                 )
             )
             resp = await self.search_llm.ainvoke([prompt, HumanMessage(content=self.task)])
@@ -86,6 +85,25 @@ class Planner:
             if isinstance(text, str):
                 try:
                     data = json.loads(text)
+                    if isinstance(data, dict):
+                        use_search = data.get("use_search")
+                        if use_search is False:
+                            logger.info("Planner chose not to search.")
+                            return []
+                        queries = data.get("queries", [])
+                        if isinstance(queries, list):
+                            queries = [q.strip() for q in queries if isinstance(q, str) and q.strip()]
+                            # Deduplicate while preserving order
+                            seen = set()
+                            deduped = []
+                            for q in queries:
+                                if q not in seen:
+                                    deduped.append(q)
+                                    seen.add(q)
+                            if deduped:
+                                logger.info("Planner suggested search queries: %s", deduped)
+                            return deduped
+                        return []
                     if isinstance(data, list):
                         queries = [q.strip() for q in data if isinstance(q, str) and q.strip()]
                         seen = set()
@@ -94,15 +112,35 @@ class Planner:
                             if q not in seen:
                                 deduped.append(q)
                                 seen.add(q)
-                        queries = deduped or fallback_queries
-                        logger.info("Planner suggested search queries: %s", queries)
-                        return queries
+                        if deduped:
+                            logger.info("Planner suggested search queries: %s", deduped)
+                        return deduped
                 except json.JSONDecodeError:
                     pass
-            return fallback_queries
+                parsed_lines = self._parse_query_lines(text)
+                if parsed_lines:
+                    logger.info("Planner suggested search queries (parsed): %s", parsed_lines)
+                    return parsed_lines
+            return []
         except Exception as exc:
-            logger.debug("Search query generation failed, using fallback queries: %s", exc, exc_info=True)
-            return fallback_queries
+            logger.debug("Search query generation failed; skipping search: %s", exc, exc_info=True)
+            return []
+
+    def _parse_query_lines(self, text: str) -> List[str]:
+        lines = []
+        for raw in (text or "").splitlines():
+            cleaned = re.sub(r"^[\\s\\-\\*\\d\\)\\.]+", "", raw).strip().strip('"')
+            if cleaned:
+                lines.append(cleaned)
+        if not lines:
+            return []
+        seen = set()
+        deduped = []
+        for q in lines:
+            if q not in seen:
+                deduped.append(q)
+                seen.add(q)
+        return deduped
 
     def _build_query_variants(self, query: str) -> List[tuple[str, Optional[str]]]:
         """
@@ -216,6 +254,9 @@ class Planner:
         self._search_context = ""
 
         queries = await self._decide_search_queries()
+        if not queries:
+            logger.info("Planner search skipped; no queries provided.")
+            return self._search_context
         logger.info("Planner will try search queries: %s", queries)
 
         summary_lines: List[str] = []

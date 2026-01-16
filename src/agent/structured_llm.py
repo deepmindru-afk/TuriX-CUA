@@ -133,10 +133,16 @@ class ActorOutput(BaseModel):
 class Step(BaseModel):
     step_id: str = Field(..., pattern=r"^Step \d+$")
     description: Optional[str]
+    important_search_info: str = Field(..., description="Relevant search info for this step or empty string.")
+
+class IterationInfo(BaseModel):
+    current_iteration: int = Field(..., ge=1)
+    total_iterations: int = Field(..., ge=1)
 
 class PlannerOutput(BaseModel):
-    step_by_step_plan: List[Step] = Field(
-        ...,
+    iteration_info: IterationInfo
+    search_summary: str = Field(..., description="Concise summary of the most relevant search findings.")
+    step_by_step_plan: List[Step] = Field(...,
         min_items=1,
         description="Ordered high-level plan objects, each must start with 'Step N'.",
     )
@@ -144,8 +150,11 @@ class PlannerOutput(BaseModel):
     @property
     def content(self) -> str:
         lines = []
+        if self.search_summary:
+            lines.append(f"Search summary: {self.search_summary}")
         for step in self.step_by_step_plan:
-            lines.append(f"{step.step_id}: {step.description}")
+            info = step.important_search_info or ""
+            lines.append(f"{step.step_id}: {step.description} (search: {info})")
         return "\n".join(lines)
 
 __all__ = [
