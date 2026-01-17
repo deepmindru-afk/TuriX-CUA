@@ -116,7 +116,6 @@ class Agent:
         brain_llm: BaseChatModel,
         actor_llm: BaseChatModel,
         memory_llm: BaseChatModel,
-        short_memory_len: int,
         controller: Controller = Controller(),
         use_search: bool = True,
         planner_llm: Optional[BaseChatModel] = None,
@@ -126,6 +125,7 @@ class Agent:
         save_actor_conversation_path_encoding: Optional[str] = "utf-8",
         max_failures: int = 5,
         memory_budget: int = 500,
+        summary_memory_budget: Optional[int] = None,
         retry_delay: int = 10,
         max_input_tokens: int = 32000,
         resume: bool = False,
@@ -153,6 +153,9 @@ class Agent:
         self.agent_id = agent_id or _default_agent_id(task, self.current_time)
         self.task = task
         self.memory_budget = memory_budget
+        self.summary_memory_budget = (
+            summary_memory_budget if summary_memory_budget is not None else max(1, memory_budget * 4)
+        )
         self.original_task = task
         self.resume = resume
         self.memory_llm = to_structured(memory_llm, OutputSchemas.MEMORY_RESPONSE_FORMAT, MemoryOutput)
@@ -169,7 +172,6 @@ class Agent:
         self.include_attributes = include_attributes
         self.max_error_length = max_error_length
         self.screenshot_annotated = None
-        self.short_memory_len = short_memory_len
         self.max_input_tokens = max_input_tokens
         self.save_temp_file_path = os.path.join(os.path.dirname(__file__), "temp_files")
         self.use_search = use_search
@@ -209,6 +211,9 @@ class Agent:
         self._paused = False
         self._stopped = False
         self.brain_memory = ""
+        self.summary_memory = ""
+        self.recent_memory = ""
+        self.memory_snapshot_files: list[dict[str, Any]] = []
         self.infor_memory = []
         self.last_pid = None
         self.ask_for_help = False
@@ -219,6 +224,11 @@ class Agent:
         self.record_dir = os.path.join(self.save_temp_file_path, "records")
         self.record_store = RecordStore(
             self.record_dir,
+            encoding=self.save_brain_conversation_path_encoding or "utf-8",
+        )
+        self.memory_snapshot_dir = os.path.join(self.save_temp_file_path, "memory_snapshots")
+        self.memory_snapshot_store = RecordStore(
+            self.memory_snapshot_dir,
             encoding=self.save_brain_conversation_path_encoding or "utf-8",
         )
         self.brain_search = BrainSearchFlow(self.record_store)
@@ -238,14 +248,31 @@ class Agent:
                     latest_pid = r.current_app_pid
         return latest_pid
 
-    async def _summarise_memory(self) -> None:
-        """
-        Summarise the current memory to reduce its size.
-        """
+    def _refresh_brain_memory(self) -> None:
+        parts = []
+        if self.summary_memory:
+            parts.append("Summarized memory:\n" + self.summary_memory)
+        if self.recent_memory:
+            parts.append("Recent steps:\n" + self.recent_memory)
+        self.brain_memory = "\n\n".join(parts).strip()
+
+    def _extract_memory_payload(self, response: Any) -> dict:
+        parsed = getattr(response, "parsed", None)
+        if isinstance(parsed, dict):
+            return parsed
+        if isinstance(response, dict):
+            return response
+        memory_text = str(getattr(response, "content", response))
+        cleaned_memory_response = re.sub(r"^```(json)?", "", memory_text.strip())
+        cleaned_memory_response = re.sub(r"```$", "", cleaned_memory_response).strip()
+        logger.debug("[Memory] Raw text: %s", cleaned_memory_response)
+        return json.loads(cleaned_memory_response)
+
+    async def _run_memory_summary(self, memory_text: str, context_label: str) -> tuple[str, str]:
         memory_content = [
             {
                 "type": "text",
-                "content": self.brain_memory,
+                "content": f"{context_label}\n\n{memory_text}",
             }
         ]
         self.memory_message_manager._remove_last_state_message()
@@ -253,32 +280,106 @@ class Agent:
         self.memory_message_manager.add_state_message(memory_content)
         memory_messages = self.memory_message_manager.get_messages()
         response = await self.memory_llm.ainvoke(memory_messages)
-        memory_text = str(response.content)
-        cleaned_memory_response = re.sub(r"^```(json)?", "", memory_text.strip())
-        cleaned_memory_response = re.sub(r"```$", "", cleaned_memory_response).strip()
-        logger.debug("[Memory] Raw text: %s", cleaned_memory_response)
-        parsed = json.loads(cleaned_memory_response)
-        memory = parsed["summary"]
-        self.brain_memory = "The concise memory summary is:\n"
-        self.brain_memory += memory
-        self.brain_memory += "The detail steps info are:\n"
+        parsed = self._extract_memory_payload(response)
+        summary = str(parsed.get("summary", "")).strip()
+        file_name = str(parsed.get("file_name", "")).strip()
+        return summary, file_name
+
+    def _save_memory_snapshot(
+        self,
+        memory_text: str,
+        file_name: str,
+        source: str,
+        step_override: Optional[int] = None,
+    ) -> Optional[str]:
+        if not memory_text:
+            return None
+        step_value = step_override if step_override is not None else self.n_steps
+        safe_name = file_name or f"memory_snapshot_{source}_step_{step_value}.txt"
+        saved_name = self.memory_snapshot_store.save(memory_text, safe_name, step=step_value)
+        self.memory_snapshot_files.append(
+            {
+                "file_name": saved_name,
+                "source": source,
+                "step": step_value,
+            }
+        )
+        return saved_name
+
+    async def _summarise_memory(self) -> None:
+        """
+        Summarise recent memory to reduce its size without counting summaries in the budget.
+        """
+        await self._summarise_recent_memory()
+
+    async def _summarise_recent_memory(self, step_override: Optional[int] = None) -> None:
+        if not self.recent_memory:
+            return
+        try:
+            summary, file_name = await self._run_memory_summary(
+                self.recent_memory,
+                "Summarize the following recent-step memory.",
+            )
+        except Exception:
+            logger.exception("[Memory] Failed to summarize recent memory.")
+            self._save_memory_snapshot(self.recent_memory, "", "recent", step_override=step_override)
+            self._refresh_brain_memory()
+            return
+
+        self._save_memory_snapshot(self.recent_memory, file_name, "recent", step_override=step_override)
+        if not summary:
+            logger.warning("[Memory] Empty summary from memory model; keeping recent memory.")
+            self._refresh_brain_memory()
+            return
+
+        if self.summary_memory:
+            self.summary_memory = "\n".join([self.summary_memory, summary]).strip()
+        else:
+            self.summary_memory = summary
+        self.recent_memory = ""
+        await self._summarise_summary_memory(step_override=step_override)
+        self._refresh_brain_memory()
+
+    async def _summarise_summary_memory(self, step_override: Optional[int] = None) -> None:
+        if not self.summary_memory:
+            return
+        if len(self.summary_memory) <= self.summary_memory_budget:
+            return
+        try:
+            summary, file_name = await self._run_memory_summary(
+                self.summary_memory,
+                "Summarize the following accumulated summaries into a higher-level summary.",
+            )
+        except Exception:
+            logger.exception("[Memory] Failed to summarize accumulated summaries.")
+            self._save_memory_snapshot(self.summary_memory, "", "summary", step_override=step_override)
+            return
+
+        self._save_memory_snapshot(self.summary_memory, file_name, "summary", step_override=step_override)
+        if not summary:
+            logger.warning("[Memory] Empty high-level summary; keeping existing summaries.")
+            self._refresh_brain_memory()
+            return
+        self.summary_memory = summary
+        self._refresh_brain_memory()
 
     async def _update_memory(self) -> None:
         """
         Update memory content.
         """
         sorted_steps = sorted(self.brain_context.keys(), reverse=True)
-        current_state = self.brain_context[sorted_steps[0]]["current_state"] if sorted_steps else None
-        # logger.debug("current_state: %s", current_state)
+        if not sorted_steps:
+            return
+        current_state = self.brain_context[sorted_steps[0]]["current_state"]
         step_goal = current_state["next_goal"] if current_state else None
-        # logger.debug("step_goal: %s", step_goal)
         evaluation = current_state["step_evaluate"] if current_state else None
 
-        if len(self.brain_memory) > self.memory_budget:
-            await self._summarise_memory()
-
         line = f"Step {sorted_steps[0]} | Eval: {evaluation} | Goal: {step_goal}"
-        self.brain_memory = "\n".join([ln for ln in [self.brain_memory, line] if ln]).strip()
+        self.recent_memory = "\n".join([ln for ln in [self.recent_memory, line] if ln]).strip()
+        if len(self.recent_memory) > self.memory_budget:
+            await self._summarise_recent_memory()
+        else:
+            self._refresh_brain_memory()
 
     def save_memory(self) -> None:
         """Save the current memory to a file."""
@@ -292,6 +393,10 @@ class Agent:
             "infor_memory": self.infor_memory,
             "brain_context": self.brain_context,
             "step": self.n_steps,
+            "summary_memory": self.summary_memory,
+            "recent_memory": self.recent_memory,
+            "summary_memory_budget": self.summary_memory_budget,
+            "memory_snapshot_files": self.memory_snapshot_files,
         }
         file_name = os.path.join(self.save_temp_file_path, "memory.jsonl")
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
@@ -319,11 +424,32 @@ class Agent:
                 self.brain_context = data.get("brain_context", OrderedDict())
                 if self.brain_context:
                     self.brain_context = OrderedDict({int(k): v for k, v in self.brain_context.items()})
-                await self._update_memory()
+                self.summary_memory = data.get("summary_memory", "")
+                self.recent_memory = data.get("recent_memory", "")
+                self.summary_memory_budget = data.get("summary_memory_budget", self.summary_memory_budget)
+                self.memory_snapshot_files = data.get("memory_snapshot_files", [])
+                if "summary_memory" not in data and "recent_memory" not in data:
+                    await self._rebuild_memory_from_context()
+                else:
+                    self._refresh_brain_memory()
                 self.last_step_action = data.get("last_step_action", None)
                 self.next_goal = data.get("next_goal", "")
                 self.n_steps = data.get("step", 1)
                 logger.info("Loaded memory from %s", file_name)
+
+    async def _rebuild_memory_from_context(self) -> None:
+        self.summary_memory = ""
+        self.recent_memory = ""
+        self.memory_snapshot_files = []
+        for step_id in sorted(self.brain_context.keys()):
+            current_state = self.brain_context[step_id].get("current_state", {})
+            evaluation = current_state.get("step_evaluate")
+            step_goal = current_state.get("next_goal")
+            line = f"Step {step_id} | Eval: {evaluation} | Goal: {step_goal}"
+            self.recent_memory = "\n".join([ln for ln in [self.recent_memory, line] if ln]).strip()
+            if len(self.recent_memory) > self.memory_budget:
+                await self._summarise_recent_memory(step_override=step_id)
+        self._refresh_brain_memory()
 
     @time_execution_async("--brain_step")
     async def brain_step(self) -> dict:

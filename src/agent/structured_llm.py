@@ -67,6 +67,7 @@ class ReadFilesRequest(BaseModel):
 
 class MemoryOutput(BaseModel):
     summary: str = Field(..., description="Brief summary to remember for future steps.")
+    file_name: str = Field(..., description="Filename to store the pre-summarization context.")
 
     def __repr__(self) -> str:
         non_none = self.model_dump(exclude_none=True)

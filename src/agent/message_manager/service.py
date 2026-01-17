@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import List, Optional, Type
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
 	AIMessage,
@@ -48,10 +46,9 @@ class MessageManager:
 		self.max_error_length = max_error_length
 		self.give_task = give_task
 
-		# Use the updated SystemPrompt with our explicit JSON instructions.
+		# Build the system prompt for this model.
 		system_message = self.system_prompt_class(
 			self.action_descriptions,
-			# current_date=datetime.now(),
 			max_actions_per_step=max_actions_per_step,
 		).get_system_message()
 

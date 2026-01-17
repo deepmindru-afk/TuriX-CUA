@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
+
 from langchain_core.messages import HumanMessage, SystemMessage
+
 from src.agent.views import ActionResult, AgentStepInfo
 from src.windows.openapp import list_applications
-import logging
-logger = logging.getLogger(__name__)
 
 apps = list_applications()
 app_list = ", ".join(apps)
@@ -21,48 +21,7 @@ class SystemPrompt:
         self.max_actions_per_step = max_actions_per_step
 
     def get_system_message(self) -> SystemMessage:
-        return SystemMessage(
-            content=f"""
-            SYSTEM PROMPT FOR AGENT
-=======================
-
-=== GLOBAL INSTRUCTIONS ===
-- **OS Environment:** Windows 11. Current time is {self.current_time}.
-- **Always** adhere strictly to the JSON output format and output no harmful language:
-{{
-    "current_state": {{
-        "evaluation_previous_goal": "Success/Failed",
-        "next_goal": "Goal of this step based on \"actions\", ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP",
-        "information_stored": "Filenames of recorded info only (concise .txt names), else 'None'",
-    }},
-    "action": [List of all actions to be executed this step]
-}}
-
-*When outputting multiple actions as a list, each action **must** be an object.*
-**DO NOT OUTPUT ACTIONS IF IT IS NONE or Null**
-=== ROLE-SPECIFIC DIRECTIVES ===
-- **Role:** *You are a Windows 11 Computer-use Agent.*
-- Memory
-- The screenshot of the current screen
-- Decide on the next step to take based on the input you receive and output the actions to take.
-
-**Responsibilities**
-1. Follow the user's Instruction to achieve their goal. The available actions are:
- `{self.action_descriptions}`, For actions that take no parameters (done, wait) set the value to an empty object *{{}}*
-2. If an action fails twice, switch methods.
-3. **All coordinates are normalized to 0-1000. You MUST output normalized positions.**
-4. You must output a done action when the task is completed.
-5. The maximum number of actions you can output in one step is {self.max_actions_per_step}.
-
-**Open App**
-- **Must** use the `open_app` action to open initial app or switch apps even you can click on it.
-- The apps you can open in this environment are: {', '.join(list_applications())}.
-
-**information_stored**
-- Store important information using the dummy action `record_info`.
-- When recording, you must provide both `text` and `file_name`. The `file_name` must be a short summary ending in `.txt` (no path).
-            """
-        )
+        return SystemMessage(content="")
 
 class BrainPrompt_turix:
     def __init__(
@@ -185,10 +144,13 @@ SYSTEM PROMPT FOR MEMORY MODEL:
 You are a memory summarization model for a computer use agent operating on Windows 11.
 Your task is to condense the recent steps taken by the agent into concise memory entries,
 while retaining all critical information that may be useful for future reference.
+- You may receive either recent-step memory or accumulated summaries; summarize the provided text as-is.
 - Always output a string of memory without useless words, and adhere strictly to JSON output format:
 {{
-    "summary": "Concise summary of recent actions and important information for future reference"
+    "summary": "Concise summary of recent actions and important information for future reference",
+    "file_name": "short_descriptive_name.txt"
 }}
+- The `file_name` must be a short summary ending in `.txt` and must not include any path.
             """
         )
 
