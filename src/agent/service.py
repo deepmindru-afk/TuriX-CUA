@@ -97,9 +97,9 @@ class Agent:
         llm: BaseChatModel,
         short_memory_len : int,
         controller: Controller = Controller(),
+        use_ui = False,
+        use_turix: bool = True,
         planner_llm: BaseChatModel | None = None,   
-        save_conversation_path: Optional[str] = None,
-        save_conversation_path_encoding: Optional[str] = 'utf-8',
         max_failures: int = 5,
         retry_delay: int = 10,
         system_prompt_class: Type[SystemPrompt] = SystemPrompt,
@@ -123,6 +123,8 @@ class Agent:
         register_done_callback: Callable[['AgentHistoryList'], None] | None = None,
         tool_calling_method: Optional[str] = 'auto',
         agent_id: Optional[str] = None,
+        save_llm_conversation_path: Optional[str] = None,
+        save_llm_conversation_path_encoding: Optional[str] = None,
     ):
         self.current_time = datetime.now()
         self.wait_this_step = False
@@ -132,15 +134,21 @@ class Agent:
         self.resume = resume
         self.planner_llm = to_structured(planner_llm, OutputSchemas.PLANNER_RESPONSE_FORMAT, PlannerOutput)
         self.llm = to_structured(llm, OutputSchemas.AGENT_RESPONSE_FORMAT, AgentStepOutput)
-        self.save_conversation_path = save_conversation_path
-        self.save_conversation_path_encoding = save_conversation_path_encoding
+        self.use_turix = use_turix
+
+        self.save_llm_conversation_path = save_llm_conversation_path
+        self.save_llm_conversation_path_encoding = (
+            save_llm_conversation_path_encoding or "utf-8"
+        )
         self.include_attributes = include_attributes
         self.max_error_length = max_error_length
         self.screenshot_annotated = None
         self.short_memory_len = short_memory_len
         self.max_input_tokens = max_input_tokens
         self.save_temp_file_path = os.path.join(os.path.dirname(__file__), 'temp_files')
+        self.use_ui = use_ui
         self.controller = controller
+        self.controller.use_ui = self.use_ui
         self.max_actions_per_step = max_actions_per_step
         self.last_step_action = None
         self.goal_action_memory = OrderedDict()
@@ -180,8 +188,9 @@ class Agent:
                 max_input_tokens=self.max_input_tokens,
             )
 
-        if save_conversation_path:
-            logger.info(f'Saving conversation to {save_conversation_path}')
+        if self.save_llm_conversation_path:
+            sample_name = self._llm_conversation_file_name(step=1)
+            logger.info(f'Saving LLM conversation to {sample_name}')
 
         if self.resume and not agent_id:
             raise ValueError("Agent ID is required for resuming a task.")
@@ -230,7 +239,7 @@ class Agent:
         }
         file_name = os.path.join(self.save_temp_file_path, f"memory.jsonl")
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
-        with open(file_name, "w", encoding=self.save_conversation_path_encoding) as f:
+        with open(file_name, "w", encoding=self.save_llm_conversation_path_encoding) as f:
             if os.path.getsize(file_name) > 0:
                 f.truncate(0)
             f.write(json.dumps(data, ensure_ascii=False, default=lambda o: list(o) if isinstance(o, set) else o) + "\n")
@@ -243,7 +252,7 @@ class Agent:
             return
         file_name = os.path.join(self.save_temp_file_path, "memory.jsonl")
         if os.path.exists(file_name):
-            with open(file_name, "r", encoding=self.save_conversation_path_encoding) as f:
+            with open(file_name, "r", encoding=self.save_llm_conversation_path_encoding) as f:
                 lines = f.readlines()
             if len(lines) >= 1:
                 data = json.loads(lines[-1])
@@ -432,12 +441,12 @@ class Agent:
         into a file: e.g. "agent_conversation_{step}.txt"
         """
         # If you do NOT want to save or no path provided, skip
-        if not self.save_conversation_path:
+        if not self.save_llm_conversation_path:
             return
-        file_name = f"{self.save_conversation_path}_agent_{step}.txt"
+        file_name = self._llm_conversation_file_name(step)
         os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
 
-        with open(file_name, "w", encoding=self.save_conversation_path_encoding) as f:
+        with open(file_name, "w", encoding=self.save_llm_conversation_path_encoding) as f:
             # 1) Write input messages
             self._write_messages_to_file(f, input_messages)
             # 2) Write the final agent "response" (AgentOutput)
@@ -445,6 +454,16 @@ class Agent:
                 self._write_response_to_file(f, response)
 
         logger.info(f"Agent conversation saved to: {file_name}")
+
+    def _llm_conversation_file_name(self, step: int) -> str:
+        base = self.save_llm_conversation_path or ""
+        step_tag = f"step_{step:04d}"
+        if base.endswith(os.sep):
+            return os.path.join(base, f"{step_tag}.txt")
+        root, ext = os.path.splitext(base)
+        if ext:
+            return f"{root}_{step_tag}{ext}"
+        return f"{base}_{step_tag}.txt"
 
     def _write_messages_to_file(self, f: Any, messages: list[BaseMessage]) -> None:
         """

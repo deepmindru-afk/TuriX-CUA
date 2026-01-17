@@ -26,8 +26,10 @@ class Controller:
 	def __init__(
 		self,
 		exclude_actions: list[str] = [],
+		use_ui: bool = True,
 	):
 		self.exclude_actions = exclude_actions
+		self.use_ui = use_ui
 		self.registry = Registry(exclude_actions)
 		self.win = WindowsActions()
 		self._register_default_actions()
@@ -73,7 +75,11 @@ class Controller:
 				logger.error(msg)
 				return ActionResult(extracted_content=msg, error=msg)
 
-		
+			if not self.use_ui:
+				success_msg = f"✅ Launched {user_input}"
+				logger.info("Skipping PID lookup because use_ui is disabled.")
+				return ActionResult(extracted_content=success_msg)
+
 			pid = None
 
 			success_msg = f"✅ Launched {user_input}, PID={pid}"

@@ -1,8 +1,6 @@
 {
-  "logging_level": "INFO",
-  "working_dir_base": "../turix/trainingdata/task",
-  "cleanup_previous_runs": true,
-  
+  "logging_level": "DEBUG",
+
   "llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
@@ -19,12 +17,14 @@
 
   "agent": {
     "task": "open Chrome, go to github, and search for turix-cua in the github webpage. Enter the TuriX-CUA repository, and star it.",
-    "short_memory_len": 5,
+    "use_ui": false,
+    "use_planner": false,
     "max_actions_per_step": 5,
     "max_steps": 100,
+    "use_turix": true,
     "resume": false,
     "agent_id": null,
-    "save_conversation_path": "llm_interactions.log",
-    "save_conversation_path_encoding": "utf-8"
+    "save_llm_conversation_path": "llm_interactions.txt",
+    "save_llm_conversation_path_encoding": "utf-8"
   }
 }
