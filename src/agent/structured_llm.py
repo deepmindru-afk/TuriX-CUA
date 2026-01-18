@@ -90,6 +90,30 @@ class AgentStepOutput(BaseModel):
         """
         return self.model_dump(exclude_none=True, exclude_unset=True)
 
+class MemoryOutput(BaseModel):
+    summary: str = Field(..., description="Brief summary to remember for future steps.")
+
+    def __repr__(self) -> str:
+        non_none = self.model_dump(exclude_none=True)
+        field_strs = ", ".join(f"{k}={v!r}" for k, v in non_none.items())
+        return f"{self.__class__.__name__}({field_strs})"
+
+    @property
+    def content(self) -> str:
+        """
+        Returns a JSON-formatted string representation of the instance,
+        allowing access via the `.content` attribute.
+        """
+        return self.model_dump_json(exclude_none=True, exclude_unset=True)
+
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        """
+        Returns the dictionary representation of the instance,
+        facilitating direct access to structured data.
+        """
+        return self.model_dump(exclude_none=True, exclude_unset=True)
+
 class PlannerOutput(BaseModel):
     step_by_step_plan: Union[List[str], str] = Field(
         ...,
@@ -118,5 +142,6 @@ class PlannerOutput(BaseModel):
 
 __all__ = [
     "AgentStepOutput",
+    "MemoryOutput",
     "PlannerOutput",
 ]

@@ -171,6 +171,32 @@ class SystemPrompt_turix:
 3. **All coordinates are normalized to 0–1000. You MUST output normalized positions.**
             """
             )
+
+class MemoryPrompt:
+    def __init__(
+        self,
+        action_descriptions: str,
+        max_actions_per_step: int = 10,
+    ):
+        self.action_descriptions = action_descriptions
+        self.current_time = datetime.now()
+        self.max_actions_per_step = max_actions_per_step
+
+    def get_system_message(self) -> SystemMessage:
+        return SystemMessage(
+            content=f"""
+SYSTEM PROMPT FOR MEMORY MODEL:
+=== GLOBAL INSTRUCTIONS ===
+You are a memory summarization model for a computer use agent operating on macOS.
+Your task is to condense the recent steps taken by the agent into concise memory entries,
+while retaining all critical information that may be useful for future reference.
+- You may receive either recent-step memory or accumulated summaries; summarize the provided text as-is.
+- Always output a string of memory without useless words, and adhere strictly to JSON output format:
+{{
+    "summary": "Concise summary of recent actions and important information for future reference"
+}}
+            """
+        )
 class AgentMessagePrompt:
     def __init__(
         self,

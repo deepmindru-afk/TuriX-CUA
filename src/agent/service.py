@@ -32,6 +32,7 @@ from src.agent.message_manager.service import MessageManager
 from src.agent.prompts import (
     SystemPrompt_turix,
     SystemPrompt,
+    MemoryPrompt,
 )
 from src.agent.views import (
     ActionResult,
@@ -163,6 +164,9 @@ class Agent:
         agent_id: Optional[str] = None,
         save_llm_conversation_path: Optional[str] = None,
         save_llm_conversation_path_encoding: Optional[str] = None,
+        memory_llm: Optional[BaseChatModel] = None,
+        memory_budget: int = 500,
+        summary_memory_budget: Optional[int] = None,
     ):
         self.current_time = datetime.now()
         self.wait_this_step = False
@@ -172,6 +176,10 @@ class Agent:
         self.resume = resume
         self.planner_llm = to_structured(planner_llm, OutputSchemas.PLANNER_RESPONSE_FORMAT, PlannerOutput)
         self.llm = to_structured(llm, OutputSchemas.AGENT_RESPONSE_FORMAT, AgentStepOutput)
+        self.memory_budget = memory_budget
+        self.summary_memory_budget = summary_memory_budget if summary_memory_budget is not None else max(1, memory_budget * 4)
+        base_memory_llm = memory_llm or llm
+        self.memory_llm = to_structured(base_memory_llm, OutputSchemas.MEMORY_RESPONSE_FORMAT, MemoryOutput)
         self.use_turix = use_turix
 
         self.save_llm_conversation_path = save_llm_conversation_path
@@ -228,9 +236,12 @@ class Agent:
         self._paused = False
         self._stopped = False
         self.short_memory = ''
+        self.summary_memory = ''
+        self.recent_memory = ''
         self.infor_memory = []
         self.last_pid = None
         self.ask_for_help = False
+        self.last_evaluation = None
         if self.save_llm_conversation_path:
             sample_name = self._llm_conversation_file_name(step=1)
             logger.info(f'Saving LLM conversation to {sample_name}')
@@ -275,6 +286,105 @@ class Agent:
                     latest_pid = r.current_app_pid
         return latest_pid
 
+    def _refresh_short_memory(self) -> None:
+        parts = []
+        if self.summary_memory:
+            parts.append("Summarized memory:\n" + self.summary_memory)
+        if self.recent_memory:
+            parts.append("Recent steps:\n" + self.recent_memory)
+        self.short_memory = "\n\n".join(parts).strip()
+
+    def _extract_memory_payload(self, response: Any) -> dict:
+        parsed = getattr(response, "parsed", None)
+        if isinstance(parsed, dict):
+            return parsed
+        if isinstance(response, dict):
+            return response
+        memory_text = str(getattr(response, "content", response))
+        cleaned_memory_response = re.sub(r"^```(json)?", "", memory_text.strip())
+        cleaned_memory_response = re.sub(r"```$", "", cleaned_memory_response).strip()
+        logger.debug(f"[Memory] Raw text: {cleaned_memory_response}")
+        return json.loads(cleaned_memory_response)
+
+    async def _run_memory_summary(self, memory_text: str, context_label: str) -> str:
+        memory_content = [
+            {
+                "type": "text",
+                "content": f"{context_label}\n\n{memory_text}",
+            }
+        ]
+        self.memory_message_manager._remove_last_state_message()
+        self.memory_message_manager._remove_last_AIntool_message()
+        self.memory_message_manager.add_state_message(memory_content)
+        memory_messages = self.memory_message_manager.get_messages()
+        response = await self.memory_llm.ainvoke(memory_messages)
+        parsed = self._extract_memory_payload(response)
+        summary = str(parsed.get("summary", "")).strip()
+        return summary
+
+    async def _summarise_recent_memory(self) -> None:
+        if not self.recent_memory:
+            return
+        try:
+            summary = await self._run_memory_summary(
+                self.recent_memory,
+                "Summarize the following recent-step memory.",
+            )
+        except Exception:
+            logger.exception("[Memory] Failed to summarize recent memory.")
+            self._refresh_short_memory()
+            return
+
+        if not summary:
+            logger.warning("[Memory] Empty summary from memory model; keeping recent memory.")
+            self._refresh_short_memory()
+            return
+
+        if self.summary_memory:
+            self.summary_memory = "\n".join([self.summary_memory, summary]).strip()
+        else:
+            self.summary_memory = summary
+        self.recent_memory = ""
+        await self._summarise_summary_memory()
+        self._refresh_short_memory()
+
+    async def _summarise_summary_memory(self) -> None:
+        if not self.summary_memory:
+            return
+        if len(self.summary_memory) <= self.summary_memory_budget:
+            return
+        try:
+            summary = await self._run_memory_summary(
+                self.summary_memory,
+                "Summarize the following accumulated summaries into a higher-level summary.",
+            )
+        except Exception:
+            logger.exception("[Memory] Failed to summarize accumulated summaries.")
+            self._refresh_short_memory()
+            return
+
+        if not summary:
+            logger.warning("[Memory] Empty high-level summary; keeping existing summaries.")
+            self._refresh_short_memory()
+            return
+
+        self.summary_memory = summary
+        self._refresh_short_memory()
+
+    async def _update_memory(self) -> None:
+        """
+        Update memory content.
+        """
+        evaluation = self.last_evaluation or "Unknown"
+        step_goal = self.last_goal or "Unknown"
+        actions = self.last_step_action or []
+        line = f"Step {self.n_steps} | Eval: {evaluation} | Goal: {step_goal} | Actions: {actions}"
+        self.recent_memory = "\n".join([ln for ln in [self.recent_memory, line] if ln]).strip()
+        if len(self.recent_memory) > self.memory_budget:
+            await self._summarise_recent_memory()
+        else:
+            self._refresh_short_memory()
+
     def save_memory(self) -> None:
         """
         Save the current memory to a file.
@@ -285,6 +395,9 @@ class Agent:
             "pid": self.get_last_pid(),
             "task": self.task,
             "short_memory": self.short_memory,
+            "summary_memory": self.summary_memory,
+            "recent_memory": self.recent_memory,
+            "summary_memory_budget": self.summary_memory_budget,
             "infor_memory": self.infor_memory,
             "state_memory": self.state_memory,
             "step": self.n_steps
@@ -309,10 +422,24 @@ class Agent:
             if len(lines) >= 1:
                 data = json.loads(lines[-1])
                 self.last_pid = data.get("pid", None)
-                self.short_memory = data.get("short_memory", [])
+                self.short_memory = data.get("short_memory", "")
+                self.summary_memory = data.get("summary_memory", "")
+                self.recent_memory = data.get("recent_memory", "")
+                self.summary_memory_budget = data.get("summary_memory_budget", self.summary_memory_budget)
+                if not isinstance(self.short_memory, str):
+                    self.short_memory = str(self.short_memory)
+                if not isinstance(self.summary_memory, str):
+                    self.summary_memory = str(self.summary_memory or "")
+                if not isinstance(self.recent_memory, str):
+                    self.recent_memory = str(self.recent_memory or "")
                 self.infor_memory = data.get("infor_memory", [])
-                self.state_memory = data.get("state_memory", None)
+                self.state_memory = data.get("state_memory", OrderedDict())
                 self.n_steps = data.get("step", 1)
+                if self.summary_memory or self.recent_memory:
+                    self._refresh_short_memory()
+                elif self.short_memory:
+                    self.recent_memory = self.short_memory
+                    self._refresh_short_memory()
                 logger.info(f"Loaded memory from {file_name}")
 
     @time_execution_async("--step")
@@ -397,6 +524,7 @@ class Agent:
             model_output, raw = await self.get_next_action(input_messages)
             
             self.last_goal = model_output.current_state.next_goal
+            self.last_evaluation = model_output.current_state.evaluation_previous_goal
             information_stored = model_output.current_state.information_stored
             if self.register_new_step_callback:
                 self.register_new_step_callback(state, model_output, self.n_steps)
@@ -439,7 +567,8 @@ class Agent:
                 if len(self.goal_action_memory) > self.short_memory_len:
                     first_key = next(iter(self.goal_action_memory))
                     del self.goal_action_memory[first_key]
-                self.short_memory = f'The important memory: {self.state_memory}. {self.goal_action_memory}'
+                await self._update_memory()
+                self.save_memory()
 
         except Exception as e:
             result = await self._handle_step_error(e)
@@ -521,7 +650,7 @@ class Agent:
         else:
             emoji = '🤷'
         logger.info(f'{emoji} Eval: {response.current_state.evaluation_previous_goal}')
-        logger.info(f'🧠 Memory: {self.state_memory}')
+        logger.info(f'🧠 Memory: {self.short_memory}')
         logger.info(f'🎯 Next goal: {response.current_state.next_goal}')
         for i, action in enumerate(response.action):
             logger.info(f'🛠️  Action {i + 1}/{len(response.action)}: {action.model_dump_json(exclude_unset=True)}')
@@ -676,6 +805,16 @@ class Agent:
             task=self.task,
             action_descriptions=self.controller.registry.get_prompt_description(),
             system_prompt_class=self.system_prompt_class,  # Typically your SystemPrompt
+            max_input_tokens=self.max_input_tokens,
+            include_attributes=self.include_attributes,
+            max_error_length=self.max_error_length,
+            max_actions_per_step=self.max_actions_per_step,
+        )
+        self.memory_message_manager = MessageManager(
+            llm=self.memory_llm,
+            task=self.task,
+            action_descriptions=self.controller.registry.get_prompt_description(),
+            system_prompt_class=MemoryPrompt,
             max_input_tokens=self.max_input_tokens,
             include_attributes=self.include_attributes,
             max_error_length=self.max_error_length,

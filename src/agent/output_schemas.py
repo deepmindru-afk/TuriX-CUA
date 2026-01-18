@@ -185,3 +185,20 @@ class OutputSchemas:
             "schema": PLANNER_SCHEMA
         }
     }
+
+    MEMORY_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"}
+        },
+        "required": ["summary"]
+    }
+
+    MEMORY_RESPONSE_FORMAT = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "memory_output",
+            "strict": True,
+            "schema": MEMORY_SCHEMA
+        }
+    }
