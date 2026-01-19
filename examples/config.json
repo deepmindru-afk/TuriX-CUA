@@ -4,21 +4,21 @@
   "llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
-    "base_url": "https://llm.turixapi.io/v1",
+    "base_url": "https://turixapi.io/v1",
     "model_name": "turix-model"
   },
 
   "planner_llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
-    "base_url": "https://llm.turixapi.io/v1",
+    "base_url": "https://turixapi.io/v1",
     "model_name": "turix-model"
   },
 
   "memory_llm": {
     "provider": "turix",
     "api_key": "your_api_key_here",
-    "base_url": "https://llm.turixapi.io/v1",
+    "base_url": "https://turixapi.io/v1",
     "model_name": "turix-model"
   },
 
