@@ -158,7 +158,7 @@ class AgentMessagePrompt:
     def __init__(
         self,
         state_content: list,
-        result: Optional[List[ActionResult]] = None,
+        result: Optional[list[ActionResult]] = None,
         include_attributes: list[str] = [],
         max_error_length: int = 400,
         step_info: Optional[AgentStepInfo] = None,
