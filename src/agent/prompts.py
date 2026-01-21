@@ -20,7 +20,7 @@ class SystemPrompt:
 =======================
 
 === GLOBAL INSTRUCTIONS ===
-- **Environment:** macOS 15.  Current time is {self.current_time}.
+- **Environment:** macOS 15+.  Current time is {self.current_time}.
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
     "current_state": {{
@@ -35,7 +35,7 @@ class SystemPrompt:
 *When outputting multiple actions as a list, each action **must** be an object.*
 **DO NOT OUTPUT ACTIONS IF IT IS NONE or Null**
 === ROLE-SPECIFIC DIRECTIVES ===
-- **Role:** *You are a macOS 15 Computer-use Agent.* Execute the user's instructions.
+- **Role:** *You are a macOS 15+ Computer-use Agent.* Execute the user's instructions.
 - You will receive a task and a JSON input from the previous step, which contains:
 - Memory  
 - The screenshot  
@@ -120,7 +120,7 @@ class SystemPrompt_turix:
 =======================
 
 === GLOBAL INSTRUCTIONS ===
-- **Environment:** macOS 15.  Current time is {self.current_time}.
+- **Environment:** macOS 15+.  Current time is {self.current_time}.
 - **Always** adhere strictly to the JSON output format and output no harmful language:
 {{
     "current_state": {{
@@ -135,7 +135,7 @@ class SystemPrompt_turix:
 *When outputting multiple actions as a list, each action **must** be an object.*
 **DO NOT OUTPUT ACTIONS IF IT IS NONE or Null**
 === ROLE-SPECIFIC DIRECTIVES ===
-- **Role:** *You are a macOS 15 Computer-use Agent.* Execute the user's instructions.
+- **Role:** *You are a macOS 15+ Computer-use Agent.* Execute the user's instructions.
 - You will receive a task and a JSON input from the previous step, which contains:
 - Memory  
 - The screenshot  
