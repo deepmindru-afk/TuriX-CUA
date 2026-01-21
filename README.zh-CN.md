@@ -33,7 +33,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 - [🖼️ 演示](#demos)
 - [✨ 关键特性](#key-features)
 - [📊 模型性能指标](#model-performance)
-- [🚀 快速开始（macOS 15）](#quickstart-macos-15)
+- [🚀 快速开始（macOS 15+）](#quickstart-macos-15)
    - [1. 下载应用](#download-app)
    - [2. 创建 Python 3.12 环境](#create-python-env)
    - [3. 授予 macOS 权限](#grant-macos-permissions)
@@ -108,7 +108,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 更多细节请查看我们的 [报告](https://turix.ai/technical-report/)。
 
-## <a id="quickstart-macos-15"></a>🚀 快速开始（macOS 15）
+## <a id="quickstart-macos-15"></a>🚀 快速开始（macOS 15+）
 
 > **我们从不收集数据**——安装、授权，尽情折腾。
 
