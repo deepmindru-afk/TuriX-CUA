@@ -33,13 +33,10 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 - [🖼️ 演示](#demos)
 - [✨ 关键特性](#key-features)
 - [📊 模型性能指标](#model-performance)
-- [🚀 快速开始（macOS 15）](#quickstart-macos-15)
+- [🚀 快速开始（Windows 11）](#quickstart-windows)
    - [1. 下载应用](#download-app)
    - [2. 创建 Python 3.12 环境](#create-python-env)
-   - [3. 授予 macOS 权限](#grant-macos-permissions)
-      - [3.1 mac辅助功能](#accessibility)
-      - [3.2 Safari 自动化](#safari-automation)
-   - [4. 配置并运行](#configure-run)
+   - [3. 配置并运行](#configure-run)
 - [🤝 贡献指南](#contributing)
 - [🗺️ 开发规划](#roadmap)
 
@@ -49,7 +46,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 **2025 年 12 月 30 日** - 🎉Agent架构迎来重要更新。我们在 multi-agent 分支引入多模型架构，将单一模型的压力分散到多个模型上，以减轻注意力机制的负担。
 
-**2025 年 10 月 16 日** - 🚀 自动化爱好者的重大消息！TuriX 现已全面支持前沿的 **Qwen3-VL** 视觉语言模型，赋能 **macOS** 与 **Windows** 的顺畅自动化。基于我们的内部基准，该集成在复杂 UI 交互上可将成功率提升多达 15%。无论你是在脚本化日常流程还是处理复杂项目，Qwen3-VL 的多模态推理都能带来前所未有的精度。
+**2025 年 10 月 16 日** - 🚀 自动化爱好者的重大消息！TuriX 现已全面支持前沿的 **Qwen3-VL** 视觉语言模型，赋能 **Windows** 的顺畅自动化。基于我们的内部基准，该集成在复杂 UI 交互上可将成功率提升多达 15%。无论你是在脚本化日常流程还是处理复杂项目，Qwen3-VL 的多模态推理都能带来前所未有的精度。
 
 **2025 年 9 月 30 日** - 🎉 激动人心的更新！我们在 [TuriX API 平台](https://turixapi.io) 发布了最新 AI 模型，带来更强性能、更聪明的推理以及更顺滑的集成，帮助你实现更强大的桌面自动化。开发者和研究者，现在就去平台获取并升级你的工作流！
 
@@ -60,22 +57,6 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 ---
 
 ## <a id="demos"></a>🖼️ 演示
-<h3 align="center">MacOS 演示</h3>
-<p align="center"><strong>预订机票、酒店和 Uber。</strong></p>
-<p align="center">
-   <img src="./doc/booking_demo.gif" width="1600" alt="TuriX macOS 演示 - 预订">
-</p>
-
-<p align="center"><strong>查询 iPhone 价格，创建 Pages 文档，并发送给联系人</strong></p>
-<p align="center">
-   <img src="./doc/demo1.gif" width="1600" alt="TuriX macOS 演示 - 查询 iPhone 价格并共享文档">
-</p>
-
-<p align="center"><strong>在老板通过 Discord 发送的 Numbers 文件中生成柱状图，插入到 PowerPoint 的正确位置，并回复老板。</strong></p>
-<p align="center">
-   <img src="./doc/complex_demo_mac.gif" width="1600" alt="TuriX macOS 演示 - Excel 图表到 PowerPoint">
-</p>
-
 <h3 align="center">Windows 演示</h3>
 <p align="center"><strong>在 YouTube 搜索视频内容并点赞</strong></p>
 <p align="center">
@@ -83,7 +64,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 </p>
 
 <h3 align="center">与 Claude 的 MCP 演示</h3>
-<p align="center"><strong>Claude 搜索 AI 新闻并通过 MCP 调用 TuriX，将研究结果写入 Pages 文档并发送给联系人</strong></p>
+<p align="center"><strong>Claude 搜索 AI 新闻并通过 MCP 调用 TuriX，将研究结果写入 Word 文档并发送给联系人</strong></p>
 <p align="center">
    <img src="./doc/mcp_demo1.gif" width="1600" alt="TuriX MCP 演示 - 新闻搜索与共享">
 </p>
@@ -93,7 +74,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 ## <a id="key-features"></a>✨ 关键特性
 | 能力 | 含义 |
 |------------|---------------|
-| **SOTA 默认模型** | 在 Mac 上的成功率和速度上超越此前的开源Agent（如 UI‑TARS） |
+| **SOTA 默认模型** | 在 Windows 上的成功率和速度上超越此前的开源Agent（如 UI‑TARS） |
 | **无需应用专用 API** | 只要人能点，TuriX 就能点——WhatsApp、Excel、Outlook、内部工具… |
 | **可热插拔的「大脑」** | 无需改代码即可替换 VLM 策略（`config.json`） |
 | **MCP 就绪** | 可接入 *Claude for Desktop* 或 **任何** 支持 Model Context Protocol (MCP) 的Agent |
@@ -108,21 +89,13 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 更多细节请查看我们的 [报告](https://turix.ai/technical-report/)。
 
-## <a id="quickstart-macos-15"></a>🚀 快速开始（macOS 15）
+## <a id="quickstart-windows"></a>🚀 快速开始（Windows 11）
 
-> **我们从不收集数据**——安装、授权，尽情折腾。
-
-> **0. Windows 用户**：请切换到 `windows` 分支获取 Windows 专属的安装与设置说明。
->
-> ```bash
-> git checkout multi-agent-windows
-> ```
+> **我们从不收集数据**——安装、配置，尽情折腾。
 
 
 ### <a id="download-app"></a>1. 下载应用
-为了更方便使用，[下载应用](https://turix.ai/)
-
-或按下面的手动步骤安装：
+Windows 暂无桌面应用，请按下面的手动步骤安装：
 
 ### <a id="create-python-env"></a>2. 创建 Python 3.12 环境
 首先克隆仓库并运行：
@@ -132,33 +105,9 @@ conda activate turix_env        # requires conda ≥ 22.9
 pip install -r requirements.txt
 ```
 
-### <a id="grant-macos-permissions"></a>3. 授予 macOS 权限
+### <a id="configure-run"></a>3. 配置并运行
 
-#### <a id="accessibility"></a>3.1 辅助功能
-1. 打开 **系统设置 ▸ 隐私与安全性 ▸ 辅助功能**  
-2. 点击 **＋**，然后添加 **Terminal** 和 **Visual Studio Code**（或你使用的任何 IDE）
-3. 如果运行仍然失败，也请添加 **/usr/bin/python3**
-
-#### <a id="safari-automation"></a>3.2 Safari 自动化
-1. **Safari ▸ 设置 ▸ 高级** → 启用 **显示针对 Web 开发者的功能**  
-2. 在新出现的 **开发** 菜单中启用  
-    * **允许远程自动化**  
-    * **允许来自 Apple Events 的 JavaScript**  
-
-##### 触发权限对话框（每个 shell 运行一次）
-```
-# macOS 终端
-osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering accessibility request")" in document 1'
-
-# VS Code 集成终端（重复一次以授权 VS Code）
-osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering accessibility request")" in document 1'
-```
-
-> **在每个弹窗中点击“允许”**，这样Agent才能驱动 Safari。
-
-### <a id="configure-run"></a>4. 配置并运行
-
-#### 4.1 编辑任务配置
+#### 3.1 编辑任务配置
 
 > [!IMPORTANT]
 > **任务配置非常关键**：任务指令的质量直接影响成功率。清晰、具体的提示会带来更好的自动化效果。
@@ -167,72 +116,27 @@ osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering acce
 ```json
 {
     "agent": {
-         "task": "open system settings, switch to Dark Mode"
+         "task": "open Chrome, go to github, search for TuriX CUA, enter the TuriX repository, and star this repository."
     }
 }
 ```
+Windows 版本没有 use_ui 参数，状态只有截图。
 
-#### 4.2 编辑 API 配置
+#### 3.2 编辑 API 配置
 
 从我们的[官网](https://turix.ai/api-platform/)获取 API，现在可获 $20 额度。
 登录网站，密钥在页面底部。
 
-在这个 multi-agent 分支，你需要同时配置 brain、actor 和 memory 模型；目前该特性仅支持苹果电脑。如果开启规划（`agent.use_plan: true`），还需要配置 planner 模型。
-我们强烈建议你将 turix-actor 模型作为 actor。brain 可以使用你喜欢的任意 VLM，我们的平台提供 qwen3vl，也可以切换到 Gemini3 pro。
-
 在 `examples/config.json` 中编辑 API：
 ```json
-"brain_llm": {
+"llm": {
       "provider": "turix",
-      "model_name": "turix-brain-model",
-      "api_key": "YOUR_API_KEY",
-      "base_url": "https://llm.turixapi.io/v1"
-   },
-"actor_llm": {
-      "provider": "turix",
-      "model_name": "turix-actor-model",
-      "api_key": "YOUR_API_KEY",
-      "base_url": "https://llm.turixapi.io/v1"
-   },
-"memory_llm": {
-      "provider": "turix",
-      "model_name": "turix-memory-model",
-      "api_key": "YOUR_API_KEY",
-      "base_url": "https://llm.turixapi.io/v1"
-   },
-"planner_llm": {
-      "provider": "turix",
-      "model_name": "turix-planner-model",
       "api_key": "YOUR_API_KEY",
       "base_url": "https://llm.turixapi.io/v1"
    }
 ```
 
-如果要使用本地 Ollama，请将各个角色指向你的 Ollama 服务：
-```json
-"brain_llm": {
-      "provider": "ollama",
-      "model_name": "llama3.2-vision",
-      "base_url": "http://localhost:11434"
-   },
-"actor_llm": {
-      "provider": "ollama",
-      "model_name": "llama3.2-vision",
-      "base_url": "http://localhost:11434"
-   },
-"memory_llm": {
-      "provider": "ollama",
-      "model_name": "llama3.2-vision",
-      "base_url": "http://localhost:11434"
-   },
-"planner_llm": {
-      "provider": "ollama",
-      "model_name": "llama3.2-vision",
-      "base_url": "http://localhost:11434"
-   }
-```
-
-#### 4.3 配置自定义模型（可选）
+#### 3.3 配置自定义模型（可选）
 
 如果你想使用 build_llm 函数中未定义的其他模型，需要先在代码中定义，再在配置中设置。
 
@@ -246,7 +150,7 @@ if provider == "name_you_want":
 ```
 请根据你的 LLM 在 ChatOpenAI、ChatGoogleGenerativeAI、ChatAnthropic 或 ChatOllama 之间切换，并修改对应的模型名称。
 
-#### 4.4 启动Agent
+#### 3.4 启动Agent
 
 ```bash
 python examples/main.py
@@ -254,7 +158,7 @@ python examples/main.py
 
 **享受免手操作的计算体验 🎉**
 
-#### 4.5 恢复已中断的任务
+#### 3.5 恢复已中断的任务
 
 如果任务中断，想从上次位置继续，请在 `examples/config.json` 中设置固定的 `agent_id` 并开启 `resume`：
 ```json
