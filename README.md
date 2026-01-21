@@ -44,7 +44,7 @@ Prefer your own model? **Change in `config.json` and go.**
 
 **December 30, 2025** - 🎉 Significant update in Agent Architecture. We introduce a multi-model architecture in the multi-agent branch, releasing the stress from a single model to multiple models.
 
-**October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across both **macOS** and **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
+**October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
 Ready to level up? Update your `config.json` and start automating—happy hacking! 🎉
 
 **September 30, 2025** - 🎉 Exciting update! We've just released our latest AI model on the [TuriX API platform](https://turixapi.io), bringing enhanced performance, smarter reasoning, and seamless integration for even more powerful desktop automation. Developers and researchers, this is your cue—head over to the platform to access it now and elevate your workflows!
@@ -54,22 +54,6 @@ Ready to level up? Update your `config.json` and start automating—happy hackin
 ---
 
 ## 🖼️ Demos
-<h3 align="center">MacOS Demo</h3>
-<p align="center"><strong>Book a flight, hotel and uber.</strong></p>
-<p align="center">
-   <img src="./doc/booking_demo.gif" width="1600" alt="TuriX macOS demo - booking">
-</p>
-
-<p align="center"><strong>Search iPhone price, create Pages document, and send to contact</strong></p>
-<p align="center">
-   <img src="./doc/demo1.gif" width="1600" alt="TuriX macOS demo - iPhone price search and document sharing">
-</p>
-
-<p align="center"><strong>Generate a bar-chart in the numbers file sent by boss in discord and insert it to the right place of my powerpoint, and reply my boss.</strong></p>
-<p align="center">
-   <img src="./doc/complex_demo_mac.gif" width="1600" alt="TuriX macOS demo - excel graph to powerpoint">
-</p>
-
 <h3 align="center">Windows Demo</h3>
 <p align="center"><strong>Search video content in youtube and like it</strong></p>
 <p align="center">
@@ -77,7 +61,7 @@ Ready to level up? Update your `config.json` and start automating—happy hackin
 </p>
 
 <h3 align="center">MCP with Claude Demo</h3>
-<p align="center"><strong>Claude search for AI news, and call TuriX with MCP, write down the research result to a pages document and send it to contact</strong></p>
+<p align="center"><strong>Claude search for AI news, and call TuriX with MCP, write down the research result to a Word document and send it to contact</strong></p>
 <p align="center">
    <img src="./doc/mcp_demo1.gif" width="1600" alt="TuriX MCP demo - news search and sharing">
 </p>
@@ -87,7 +71,7 @@ Ready to level up? Update your `config.json` and start automating—happy hackin
 ## ✨ Key Features
 | Capability | What it means |
 |------------|---------------|
-| **SOTA default model** | Outperforms previous open‑source agents (e.g. UI‑TARS) on success rate and speed on Mac |
+| **SOTA default model** | Outperforms previous open‑source agents (e.g. UI‑TARS) on success rate and speed on Windows |
 | **No app‑specific APIs** | If a human can click it, TuriX can too—WhatsApp, Excel, Outlook, in‑house tools… |
 | **Hot‑swappable "brains"** | Replace the VLM policy without touching code (`config.json`) |
 | **MCP‑ready** | Hook up *Claude for Desktop* or **any** agent via the Model Context Protocol (MCP) |
@@ -106,17 +90,8 @@ For more details, check our [report](https://turix.ai/technical-report/).
 
 > **We never collect data**—install, grant permissions, and hack away.
 
-> **0. Mac Users**: Switch to the `multi-agent` branch for MacOS-specific setup and installation instructions.
->
-> ```bash
-> git checkout multi-agent
-> ```
-
 ### 1. Download the App
-For easier MacOS usage, [download the app](https://turix.ai/)
-The app only works for Mac!!!
-
-Or follow the manual setup below:
+The desktop app is not available on Windows yet. Please use the manual setup below.
 
 ### 2. Create a Python 3.12 Environment
 Firstly Clone the repository and run:
@@ -125,8 +100,6 @@ conda create -n turix_env python=3.12
 conda activate turix_env        # requires conda ≥ 22.9
 pip install -r requirements.txt
 ```
-
-> **Click "Allow" on every dialog** so the agent can run.
 
 ### 3. Configure & Run
 
