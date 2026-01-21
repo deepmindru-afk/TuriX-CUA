@@ -33,7 +33,7 @@ Prefer your own model? **Change in `config.json` and go.**
 - [🖼️ Demos](#️-demos)
 - [✨ Key Features](#-key-features)
 - [📊 Model Performance](#-model-performance)
-- [🚀 Quick‑Start (macOS 15)](#-quickstart-macos-15)
+- [🚀 Quick‑Start (macOS 15+)](#-quickstart-macos-15)
    - [1. Download the App](#1-download-the-app)
    - [2. Create a Python 3.12 Environment](#2-create-a-python-312-environment)
    - [3. Grant macOS Permissions](#3-grant-macos-permissions)
@@ -107,7 +107,7 @@ Our agent achieves state-of-the-art performance on desktop automation tasks:
 
 For more details, check our [report](https://turix.ai/technical-report/).
 
-## 🚀 Quick‑Start (macOS 15)
+## 🚀 Quick‑Start (macOS 15+)
 
 > **We never collect data**—install, grant permissions, and hack away.
 

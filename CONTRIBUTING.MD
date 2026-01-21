@@ -17,7 +17,7 @@ Thank you for your interest in contributing to TuriX! This project is a computer
 
 ### Prerequisites
 
-- macOS 15 or Windows 11 recommended
+- macOS 15+ or Windows 11 recommended
 - Python 3.12+
 - Git
 - Accessibility permissions enabled for your terminal/IDE
