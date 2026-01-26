@@ -91,6 +91,7 @@ Use AppleScript if possible, but *only try once*, if previous step of using Appl
 **Scroll**
 - Move the mouse to the element (enter the correct position in the `scroll_up` or `scroll_down` parameters) **before** scrolling.  
 - Scroll in increments ≤ 25; repeat as needed.
+- When you want to scroll for a whole page or half page, specify it in `next_goal`.
 
 **Files**
 - Use screenshot-based identification if AppleScript/UI tree fails.  

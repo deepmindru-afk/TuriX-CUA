@@ -45,12 +45,12 @@ class RightClickPixel(BaseModel):
 class ScrollUpAction(BaseModel):
 	position: List[float] = Field(..., description="Coordinates (normalised) [x,y] to execute scroll")
 	dx: Optional[int] = Field(..., description="Amount to scroll left, between 0 and 25")
-	dy: Optional[int] = Field(..., description="Amount to scroll up, between 0 and 25")
+	dy: Optional[int] = Field(..., description="Amount to scroll up, between 0 and 25. 25 is one page up")
 
 class ScrollDownAction(BaseModel):
 	position: List[float] = Field(..., description="Coordinates (normalised) [x,y] to execute scroll")
 	dx: Optional[int] = Field(..., description="Amount to scroll left, between 0 and 25")
-	dy: Optional[int] = Field(..., description="Amount to scroll down, between 0 and 25")
+	dy: Optional[int] = Field(..., description="Amount to scroll down, between 0 and 25. 25 is one page down")
 
 class ExtractAction(BaseModel):
 	position1: List[float] = Field(..., description="Coordinates (normalised) [x,y]")
