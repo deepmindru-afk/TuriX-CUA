@@ -244,14 +244,17 @@ class Agent:
             skill_catalog = ""
             if self.use_skills and self.available_skills:
                 skill_catalog = format_skill_catalog(self.available_skills)
-            planner_search_llm = self.planner_llm_raw if self.use_search else None
+            planner_preplan_llm = self.planner_llm_raw if (self.use_search or self.use_skills) else None
             self.planner = Planner(
                 planner_llm=self.planner_llm,
                 task=self.task,
                 max_input_tokens=self.max_input_tokens,
-                search_llm=planner_search_llm,
+                preplan_llm=planner_preplan_llm,
                 use_search=self.use_search,
                 skill_catalog=skill_catalog,
+                use_skills=self.use_skills,
+                available_skills=self.available_skills,
+                skills_max_chars=self.skills_max_chars,
                 save_planner_conversation_path=self.save_planner_conversation_path,
                 save_planner_conversation_path_encoding=self.save_planner_conversation_path_encoding,
             )

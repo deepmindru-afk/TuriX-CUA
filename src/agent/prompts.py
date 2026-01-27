@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
 from src.agent.views import ActionResult, AgentStepInfo
 from src.windows.openapp import list_applications
@@ -259,7 +259,7 @@ SYSTEM_PROMPT_FOR_PLANNER
 - **IMPORTANT STEP ID FORMAT**: Each step in `step_by_step_plan` must have `step_id` as "Step X" starting from 1 (reset per iteration).
 - **IMPORTANT DESCRIPTION CONTENT**: Descriptions must be concise, high-level goals in English, no low-level details (e.g., no keystrokes, clicks). Focus on achieving the step's goal for the CURRENT iteration's specific item/instance.
 - **SEARCH INFO FIELDS**: If no search was used or no relevant findings, set `search_summary` and each `important_search_info` to an empty string.
-- **SKILL SELECTION**: Always include `selected_skills` as a list of skill names from the Skills Catalog. If none apply or no skills are provided, output an empty list [].
+- **SKILL SELECTION**: Always include `selected_skills` as a list of skill names from the Skills Catalog. If none apply or no skills are provided, output an empty list []. If the user message provides "Preselected skills", you MUST use that list exactly and do not add or remove skills.
 - **NATURAL LANGUAGE PLAN**: Include `natural_language_plan` as a concise, high-level description of the overall plan. Do NOT include step IDs, numbering like "Step 1", or low-level actions (clicks, keystrokes). Prefer 2-6 short sentences or bullets describing the main objectives.
 {skills_block}
 === MULTI-TURN REPETITIVE TASK HANDLING ===
@@ -295,3 +295,131 @@ SYSTEM_PROMPT_FOR_PLANNER
 """
 
   )
+
+
+class PlannerPreplanPrompt:
+    def __init__(self, task: str, use_search: bool, use_skills: bool, skill_catalog: str = ""):
+        self.task = task
+        self.use_search = use_search
+        self.use_skills = use_skills
+        self.skill_catalog = skill_catalog or ""
+
+    def _skills_block(self) -> str:
+        if self.skill_catalog:
+            return f"\nSKILLS CATALOG (choose exact names):\n{self.skill_catalog}\n"
+        return "\nSKILLS CATALOG: (No skills provided.)\n"
+
+    def _system_prompt(self) -> str:
+        return (
+            "You are a planner pre-processor. Decide whether web search is needed and which skills apply. "
+            "Return JSON only in the following format:\n"
+            "{\"use_search\": false, \"queries\": [], \"selected_skills\": []}\n"
+            "Rules:\n"
+            f"- Search enabled: {self.use_search}. If disabled, set use_search=false and queries=[].\n"
+            "- If search is needed, use_search=true and provide 1-3 queries.\n"
+            "- Each query must be under 12 words, English, diverse, and not a copy of the full task.\n"
+            f"- Skills enabled: {self.use_skills}. If disabled or none apply, selected_skills=[].\n"
+            "- If skills are enabled, choose ONLY from the catalog and output exact skill names.\n"
+            f"{self._skills_block()}"
+        )
+
+    def get_messages(self) -> list[BaseMessage]:
+        system = SystemMessage(content=self._system_prompt())
+        return [system, HumanMessage(content=self.task)]
+
+
+class PlannerPlanMessageBuilder:
+    def __init__(self, action_descriptions: str, skill_catalog: str = "", use_skills: bool = False):
+        self.action_descriptions = action_descriptions
+        self.skill_catalog = skill_catalog
+        self.use_skills = use_skills
+
+    def _search_blocks(self, search_context: str) -> tuple[str, str]:
+        if not search_context:
+            return "", ""
+        search_block = (
+            "Readable DuckDuckGo findings selected by planner (summary only):\n"
+            f"{search_context}\n\n"
+        )
+        search_guidance = (
+            "Use the search findings above to populate the \"important search info\" field in every step "
+            "with concise, useful insights that support that step. "
+            "Include a short summary of the most relevant search findings for the overall task if helpful.\n"
+        )
+        return search_block, search_guidance
+
+    def _skill_blocks(
+        self,
+        selected_skills: list[str],
+        skill_context: str,
+    ) -> tuple[str, str]:
+        if not self.use_skills:
+            return "", ""
+        if selected_skills:
+            skills_list = ", ".join(selected_skills)
+            skill_block = (
+                f"Preselected skills (use EXACTLY these in selected_skills): {skills_list}\n\n"
+            )
+            if skill_context:
+                skill_block += f"Selected skill instructions:\n{skill_context}\n\n"
+            skill_guidance = "Use the selected skill instructions above to guide the plan for each step.\n"
+            return skill_block, skill_guidance
+        return "Preselected skills: [] (no skills selected).\n\n", ""
+
+    def build_initial_messages(
+        self,
+        task: str,
+        search_context: str,
+        selected_skills: list[str],
+        skill_context: str,
+    ) -> list[BaseMessage]:
+        planner_prompt = PlannerPrompt(
+            self.action_descriptions,
+            skill_catalog=self.skill_catalog,
+        )
+        system_message = planner_prompt.get_system_message().content
+        search_block, search_guidance = self._search_blocks(search_context)
+        skill_block, skill_guidance = self._skill_blocks(selected_skills, skill_context)
+        content = f"""
+                {system_message}
+                {search_block}
+                {skill_block}
+                {search_guidance}
+                {skill_guidance}
+                Now, here is the task you need to break down:
+                "{task}"
+                Please follow the guidelines and provide the required JSON output.
+                """
+        return [HumanMessage(content=content)]
+
+    def build_continue_messages(
+        self,
+        task: str,
+        info_memory: str,
+        task_summary: str,
+        plan_list: list[str],
+        search_context: str,
+        selected_skills: list[str],
+        skill_context: str,
+    ) -> list[BaseMessage]:
+        planner_prompt = PlannerPrompt(
+            self.action_descriptions,
+            skill_catalog=self.skill_catalog,
+        )
+        search_block, search_guidance = self._search_blocks(search_context)
+        skill_block, skill_guidance = self._skill_blocks(selected_skills, skill_context)
+        content = f"The summary of previous tasks are as follows: {task_summary}\n\n"
+        content += f"The information memory for previous tasks are as follows: {info_memory}\n\n"
+        content += f"The previous task you planned and being completed is as follows: '{plan_list}'.\n\n"
+        content += search_block
+        content += skill_block
+        if search_guidance:
+            content += search_guidance
+        if skill_guidance:
+            content += skill_guidance
+        content += (
+            "Based on the above information memory and task summaries, please continue to edit and "
+            f"provide a detailed step-by-step plan for the overall task: '{task}'. Ensure that the plan "
+            "is clear, actionable, avoid the previous plan you generated, and follows the required format."
+        )
+        return [planner_prompt.get_system_message(), HumanMessage(content=content)]

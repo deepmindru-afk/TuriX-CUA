@@ -9,11 +9,12 @@ from typing import Any, List, Optional
 from pydantic import BaseModel
 
 from dotenv import load_dotenv
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage
 
 from src.agent.message_manager.service import MessageManager
-from src.agent.prompts import PlannerPrompt
+from src.agent.prompts import PlannerPrompt, PlannerPreplanPrompt, PlannerPlanMessageBuilder
 from src.controller.service import Controller
+from src.utils.skills import SkillMetadata, load_skill_contents, format_skill_context
 
 try:
     # Preferred package name (renamed from duckduckgo_search)
@@ -35,27 +36,43 @@ logging.getLogger("primp").propagate = False
 logging.getLogger("ddgs").setLevel(logging.WARNING)
 
 
+@dataclass(frozen=True)
+class PreplanDecision:
+    use_search: bool
+    queries: List[str]
+    selected_skills: List[str]
+    raw_text: str = ""
+
+
 class Planner:
-    def __init__(
-        self,
-        planner_llm,
-        task: str,
-        max_input_tokens: int = 32000,
-        search_llm=None,
-        use_search: bool = True,
-        skill_catalog: str = "",
-        save_planner_conversation_path: Optional[str] = None,
-        save_planner_conversation_path_encoding: Optional[str] = "utf-8",
-    ):
+    def __init__(self,
+                 planner_llm,
+                 task: str,
+                 max_input_tokens: int = 32000,
+                 search_llm=None,
+                 use_search: bool = True,
+                 skill_catalog: str = "",
+                 save_planner_conversation_path: Optional[str] = None,
+                 save_planner_conversation_path_encoding: Optional[str] = "utf-8",
+                 use_skills: bool = False,
+                 available_skills: Optional[List[SkillMetadata]] = None,
+                 skills_max_chars: int = 4000,
+                 preplan_llm=None,
+                 ):
         self.planner_llm = planner_llm
         self.controller = Controller()
         self.task = task
         self.max_input_tokens = max_input_tokens
         self.plan_list = []
         self._search_context: Optional[str] = None
-        self.search_llm = search_llm
+        self.preplan_llm = preplan_llm or search_llm
         self.use_search = use_search
         self.skill_catalog = skill_catalog
+        self.use_skills = use_skills
+        self.available_skills = list(available_skills) if available_skills else []
+        self.skills_max_chars = max(0, skills_max_chars or 0)
+        self._preplan_decision: Optional[PreplanDecision] = None
+        self._skill_context: Optional[str] = None
         self.save_planner_conversation_path = save_planner_conversation_path
         self.save_planner_conversation_path_encoding = save_planner_conversation_path_encoding or "utf-8"
 
@@ -164,72 +181,14 @@ class Planner:
 
     async def _decide_search_queries(self) -> List[str]:
         """
-        Ask the planner model (raw, unstructured) whether search is needed and,
-        if so, propose search queries. If no usable queries are provided, skip search.
+        Use the cached preplan decision to determine search queries.
         """
         if not self.use_search:
             return []
-
-        if not self.search_llm:
+        decision = await self._ensure_preplan_decision()
+        if not decision.use_search:
             return []
-
-        try:
-            prompt = SystemMessage(
-                content=(
-                    "Decide whether web search is necessary to complete the user's task. "
-                    "If search is not needed, respond with JSON: "
-                    "{\"use_search\": false, \"queries\": []}. "
-                    "If search is needed, respond with JSON: "
-                    "{\"use_search\": true, \"queries\": [\"query1\", \"query2\"]}. "
-                    "Keep each query under 12 words, prefer English, avoid copying the whole user task text, "
-                    "and ensure the set is diverse (no near-duplicates)."
-                )
-            )
-            resp = await self.search_llm.ainvoke([prompt, HumanMessage(content=self.task)])
-            text = getattr(resp, "content", "") or ""
-            if isinstance(text, str):
-                try:
-                    data = json.loads(text)
-                    if isinstance(data, dict):
-                        use_search = data.get("use_search")
-                        if use_search is False:
-                            logger.info("Planner chose not to search.")
-                            return []
-                        queries = data.get("queries", [])
-                        if isinstance(queries, list):
-                            queries = [q.strip() for q in queries if isinstance(q, str) and q.strip()]
-                            # Deduplicate while preserving order
-                            seen = set()
-                            deduped = []
-                            for q in queries:
-                                if q not in seen:
-                                    deduped.append(q)
-                                    seen.add(q)
-                            if deduped:
-                                logger.info("Planner suggested search queries: %s", deduped)
-                            return deduped
-                        return []
-                    if isinstance(data, list):
-                        queries = [q.strip() for q in data if isinstance(q, str) and q.strip()]
-                        seen = set()
-                        deduped = []
-                        for q in queries:
-                            if q not in seen:
-                                deduped.append(q)
-                                seen.add(q)
-                        if deduped:
-                            logger.info("Planner suggested search queries: %s", deduped)
-                        return deduped
-                except json.JSONDecodeError:
-                    pass
-                parsed_lines = self._parse_query_lines(text)
-                if parsed_lines:
-                    logger.info("Planner suggested search queries (parsed): %s", parsed_lines)
-                    return parsed_lines
-            return []
-        except Exception as exc:
-            logger.debug("Search query generation failed; skipping search: %s", exc, exc_info=True)
-            return []
+        return decision.queries
 
     def _parse_query_lines(self, text: str) -> List[str]:
         lines = []
@@ -246,6 +205,135 @@ class Planner:
                 deduped.append(q)
                 seen.add(q)
         return deduped
+
+    def _normalize_skill_name(self, name: str) -> str:
+        return re.sub(r"\s+", "-", name.strip().lower())
+
+    def _dedupe_list(self, items: List[str]) -> List[str]:
+        seen = set()
+        deduped = []
+        for item in items:
+            if item not in seen:
+                deduped.append(item)
+                seen.add(item)
+        return deduped
+
+    def _safe_json_loads(self, text: str) -> Optional[Any]:
+        cleaned = self._coerce_json_text(text)
+        if not cleaned:
+            return None
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            return None
+
+    def _canonicalize_selected_skills(self, names: List[str]) -> List[str]:
+        if not names or not self.available_skills:
+            return []
+        lookup = {self._normalize_skill_name(skill.name): skill.name for skill in self.available_skills}
+        selected = []
+        for raw in names:
+            if not isinstance(raw, str):
+                continue
+            normalized = self._normalize_skill_name(raw)
+            canonical = lookup.get(normalized)
+            if canonical and canonical not in selected:
+                selected.append(canonical)
+        return selected
+
+    def _parse_preplan_response(self, text: str) -> PreplanDecision:
+        data = self._safe_json_loads(text)
+        raw_use_search = None
+        raw_queries: List[str] = []
+        raw_selected: List[str] = []
+
+        if isinstance(data, dict):
+            raw_use_search = data.get("use_search")
+            queries_value = data.get("queries") or data.get("search_queries") or []
+            if isinstance(queries_value, str):
+                raw_queries = [queries_value]
+            elif isinstance(queries_value, list):
+                raw_queries = [q for q in queries_value if isinstance(q, str)]
+
+            skills_value = data.get("selected_skills") or data.get("skills") or []
+            if isinstance(skills_value, str):
+                raw_selected = [skills_value]
+            elif isinstance(skills_value, list):
+                raw_selected = [s for s in skills_value if isinstance(s, str)]
+        elif isinstance(data, list):
+            raw_queries = [q for q in data if isinstance(q, str)]
+        else:
+            raw_queries = self._parse_query_lines(text)
+
+        queries = [q.strip() for q in raw_queries if isinstance(q, str) and q.strip()]
+        queries = self._dedupe_list(queries)
+
+        use_search = False
+        if self.use_search:
+            if isinstance(raw_use_search, bool):
+                use_search = raw_use_search
+            elif queries:
+                use_search = True
+        if not queries:
+            use_search = False
+        if not use_search:
+            queries = []
+
+        selected_skills: List[str] = []
+        if self.use_skills and raw_selected:
+            cleaned = [s.strip() for s in raw_selected if isinstance(s, str) and s.strip()]
+            selected_skills = self._canonicalize_selected_skills(cleaned)
+
+        return PreplanDecision(
+            use_search=use_search,
+            queries=queries,
+            selected_skills=selected_skills,
+            raw_text=text or "",
+        )
+
+    async def _ensure_preplan_decision(self) -> PreplanDecision:
+        if self._preplan_decision is not None:
+            return self._preplan_decision
+
+        default = PreplanDecision(use_search=False, queries=[], selected_skills=[], raw_text="")
+        if not (self.use_search or self.use_skills):
+            self._preplan_decision = default
+            return self._preplan_decision
+
+        if not self.preplan_llm:
+            logger.info("Planner preplan LLM unavailable; skipping search/skill preselection.")
+            self._preplan_decision = default
+            return self._preplan_decision
+
+        try:
+            prompt_builder = PlannerPreplanPrompt(
+                task=self.task,
+                use_search=self.use_search,
+                use_skills=self.use_skills,
+                skill_catalog=self.skill_catalog,
+            )
+            messages = prompt_builder.get_messages()
+            resp = await self.preplan_llm.ainvoke(messages)
+            text = getattr(resp, "content", "") or ""
+            decision = self._parse_preplan_response(text if isinstance(text, str) else str(text))
+            self._save_planner_conversation(messages, text if isinstance(text, str) else str(text), "preplan")
+        except Exception as exc:
+            logger.debug("Preplan decision failed; skipping search/skills: %s", exc, exc_info=True)
+            decision = default
+
+        if decision.use_search and decision.queries:
+            logger.info("Planner preplan queries: %s", decision.queries)
+        elif self.use_search:
+            logger.info("Planner preplan: search disabled or no queries.")
+
+        if self.use_skills:
+            if decision.selected_skills:
+                logger.info("Planner preplan selected skills: %s", ", ".join(decision.selected_skills))
+            else:
+                logger.info("Planner preplan selected no skills.")
+
+        self._preplan_decision = decision
+        return decision
 
     def _build_query_variants(self, query: str) -> List[tuple[str, Optional[str]]]:
         """
@@ -290,20 +378,13 @@ class Planner:
                         try:
                             results = list(ddgs.text(q, backend=backend, max_results=max_results))
                             if results:
-                                logger.info(
-                                    "Planner search success (backend=%s, query=%r): %d results",
-                                    backend,
-                                    q,
-                                    len(results),
-                                )
+                                logger.info("Planner search success (backend=%s, query=%r): %d results", backend, q, len(results))
                                 return results
                             logger.info("Planner search empty (backend=%s, query=%r)", backend, q)
                         except DDGSException as exc:
                             logger.info("DuckDuckGo search (%s backend) returned no results: %s", backend, exc)
                         except Exception as exc:
-                            logger.debug(
-                                "DuckDuckGo search (%s backend) error: %s", backend, exc, exc_info=True
-                            )
+                            logger.debug("DuckDuckGo search (%s backend) error: %s", backend, exc, exc_info=True)
                     return []
             except DDGSException as exc:
                 logger.debug("DuckDuckGo search returned no results: %s", exc)
@@ -332,7 +413,7 @@ class Planner:
 
             readable = f"{idx}. {title}"
             if snippet:
-                readable += f" - {snippet}"
+                readable += f" — {snippet}"
             if href:
                 readable += f" (source: {href})"
             lines.append(readable)
@@ -345,7 +426,7 @@ class Planner:
         """
         if "(source:" in line:
             line = line.split("(source:", 1)[0].rstrip()
-        return line.rstrip(" -.")
+        return line.rstrip(" -—·.")
 
     async def _get_search_context(self) -> str:
         """
@@ -373,6 +454,7 @@ class Planner:
             if results:
                 formatted = self._format_search_results(results)
                 logger.info("Planner search results for query=%r:\n%s", q, formatted)
+                # Collect up to two concise lines per query for a compact summary without sources
                 for idx, line in enumerate(formatted.splitlines()):
                     if idx >= 2:
                         break
@@ -393,36 +475,59 @@ class Planner:
 
         return self._search_context
 
+    async def _get_skill_context(self) -> str:
+        """
+        Load selected skill contents once per planner instance and cache a formatted context block.
+        """
+        if self._skill_context is not None:
+            return self._skill_context
+
+        self._skill_context = ""
+        if not self.use_skills:
+            return self._skill_context
+
+        decision = await self._ensure_preplan_decision()
+        if not decision.selected_skills:
+            return self._skill_context
+
+        if not self.available_skills:
+            logger.info("Skills enabled but no skills available to load.")
+            return self._skill_context
+
+        skill_contents = load_skill_contents(
+            self.available_skills,
+            decision.selected_skills,
+            max_chars=self.skills_max_chars or None,
+        )
+        if not skill_contents:
+            return self._skill_context
+
+        self._skill_context = format_skill_context(skill_contents)
+        return self._skill_context
+
     async def edit_task(self) -> "PlannerResult":
         if not self.planner_llm:
             return
         controller = Controller()
-        planner_prompt = PlannerPrompt(
+        prompt_builder = PlannerPlanMessageBuilder(
             controller.registry.get_prompt_description(),
             skill_catalog=self.skill_catalog,
+            use_skills=self.use_skills,
         )
-        system_message = planner_prompt.get_system_message().content
+        preplan = await self._ensure_preplan_decision()
         search_context = await self._get_search_context()
-        search_block = ""
-        search_guidance = ""
-        if search_context:
-            search_block = f"Readable DuckDuckGo findings selected by planner (summary only):\n{search_context}\n\n"
-            search_guidance = (
-                "Use the search findings above to populate the \"important search info\" field in every step "
-                "with concise, useful insights that support that step. "
-                "Include a short summary of the most relevant search findings for the overall task if helpful.\n"
-            )
-        content = f"""
-                {system_message}
-                {search_block}
-                {search_guidance}
-                Now, here is the task you need to break down:
-                "{self.task}"
-                Please follow the guidelines and provide the required JSON output.
-                """
-        messages = [HumanMessage(content=content)]
+        skill_context = await self._get_skill_context()
+        selected_skills = preplan.selected_skills if preplan else []
+        messages = prompt_builder.build_initial_messages(
+            task=self.task,
+            search_context=search_context,
+            selected_skills=selected_skills,
+            skill_context=skill_context,
+        )
         response = await self.planner_llm.ainvoke(messages)
         result = self._extract_planner_payload(response)
+        if isinstance(result.payload, dict):
+            result.payload["selected_skills"] = selected_skills
         reply_text = (result.raw_text or "").strip()
         reply_norm = reply_text.upper()
         if "REFUSE TO MAKE PLAN" in reply_norm:
@@ -435,33 +540,28 @@ class Planner:
         if not self.planner_llm:
             return
         controller = Controller()
-        planner_prompt = PlannerPrompt(
+        prompt_builder = PlannerPlanMessageBuilder(
             controller.registry.get_prompt_description(),
             skill_catalog=self.skill_catalog,
+            use_skills=self.use_skills,
         )
+        preplan = await self._ensure_preplan_decision()
         search_context = await self._get_search_context()
-        search_block = ""
-        if search_context:
-            search_block = (
-                f"Readable DuckDuckGo findings selected by planner (summary only):\n{search_context}\n\n"
-            )
-        content = f"The summary of previous tasks are as follows: {task_summary}\n\n"
-        content += f"The information memory for previous tasks are as follows: {info_memory}\n\n"
-        content += f"The previous task you planned and being completed is as follows: '{self.plan_list}'.\n\n"
-        content += search_block
-        if search_context:
-            content += (
-                'Use the search findings above to populate the "important search info" field in every step '
-                "with concise, useful insights that support that step. "
-                "Include a short summary of the most relevant search findings for the overall task if helpful.\n"
-            )
-        content += (
-            f"Based on the above information memory and task summaries, please continue to edit and provide a detailed step-by-step plan for the overall task: '{self.task}'. "
-            "Ensure that the plan is clear, actionable, avoid the previous plan you generated, and follows the required format."
+        skill_context = await self._get_skill_context()
+        selected_skills = preplan.selected_skills if preplan else []
+        messages = prompt_builder.build_continue_messages(
+            task=self.task,
+            info_memory=info_memory,
+            task_summary=task_summary,
+            plan_list=self.plan_list,
+            search_context=search_context,
+            selected_skills=selected_skills,
+            skill_context=skill_context,
         )
-        messages = [planner_prompt.get_system_message(), HumanMessage(content=content)]
         response = await self.planner_llm.ainvoke(messages)
         result = self._extract_planner_payload(response)
+        if isinstance(result.payload, dict):
+            result.payload["selected_skills"] = selected_skills
         reply_text = (result.raw_text or "").strip()
         reply_norm = reply_text.upper()
         if "REFUSE TO MAKE PLAN" in reply_norm:
