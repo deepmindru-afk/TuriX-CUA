@@ -35,6 +35,8 @@ Prefer your own model? **Change in `config.json` and go.**
    - [1. Download the App](#1-download-the-app)
    - [2. Create a Python 3.12 Environment](#2-create-a-python-312-environment)
    - [3. Configure & Run](#3-configure--run)
+   - [3. Configure & Run](#3-configure--run)
+   - [3.4 Skills (Optional)](#34-skills-optional)
 - [🤝 Contributing](#-contributing)
 - [🗺️ Roadmap](#️-roadmap)
 
@@ -75,6 +77,7 @@ Ready to level up? Update your `config.json` and start automating—happy hackin
 | **No app‑specific APIs** | If a human can click it, TuriX can too—WhatsApp, Excel, Outlook, in‑house tools… |
 | **Hot‑swappable "brains"** | Replace the VLM policy without touching code (`config.json`) |
 | **MCP‑ready** | Hook up *Claude for Desktop* or **any** agent via the Model Context Protocol (MCP) |
+| **Skills (markdown playbooks)** | Planner selects relevant skill guides (name + description), brain uses full instructions to plan each step |
 
 ---
 ## 📊 Model Performance
@@ -194,7 +197,36 @@ if provider == "name_you_want":
 ```
 Switch between ChatOpenAI, ChatGoogleGenerativeAI, ChatAnthropic, or ChatOllama base on your llm. Also change the model name.
 
-#### 3.4 Start the Agent
+#### 3.4 Skills (Optional)
+
+Skills are lightweight markdown playbooks stored in a single folder (default: `skills/`). Each skill file starts with YAML frontmatter containing `name` and `description`, followed by the instructions. The planner only sees the name + description to select relevant skills; the brain receives the full skill content to guide step goals.
+Skills selection requires planning (`agent.use_plan: true`).
+
+Example skill file (`skills/github-web-actions.md`):
+```md
+---
+name: github-web-actions
+description: Use when navigating GitHub in a browser (searching repos, starring, etc.).
+---
+# GitHub Web Actions
+- Open GitHub, use the site search, and navigate to the repo page.
+- If login is required, ask the user before proceeding.
+- Confirm the Star button state before moving on.
+```
+
+Enable in `examples/config.json`:
+```json
+{
+  "agent": {
+    "use_plan": true,
+    "use_skills": true,
+    "skills_dir": "skills",
+    "skills_max_chars": 4000
+  }
+}
+```
+
+#### 3.5 Start the Agent
 
 ```bash
 python examples/main.py
@@ -202,7 +234,7 @@ python examples/main.py
 
 **Enjoy hands‑free computing 🎉**
 
-#### 3.5 Resume a Terminated Task
+#### 3.6 Resume a Terminated Task
 
 To resume a task after an interruption, set a stable `agent_id` and enable `resume` in `examples/config.json`:
 ```json
@@ -245,8 +277,8 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2025 Q4** | **✅ Multi-Agent Architecture** | Evaluate and guide each step in working |
 | **2025 Q4** | **✅ Duckduckgo Integration** | Speed up the information gathering process, for smarter planning (multi-agent branch) |
 | **2026 Q1** | **✅ Ollama Support** | Support the Ollama Qwen3vl models |
-| **2026 Q1** | **Recoverable Memory Compression** | Advance memory management mechanism to stabelize performance (Commited beta version) |
-| **2026 Q1** | **Skills** | Stablize the agent workflow. |
+| **2026 Q1** | **✅ Recoverable Memory Compression** | Advance memory management mechanism to stabelize performance (Commited beta version) |
+| **2026 Q1** | **✅ Skills** | Stablize the agent workflow. |
 | **2026 Q1** | **Browser Automation** | Support a Chrome-like browser for scalability |
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |

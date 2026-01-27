@@ -36,6 +36,9 @@
     "memory_budget": 2000,
     "summary_memory_budget": 8000,
     "use_search": true,
+    "use_skills": false,
+    "skills_dir": "skills",
+    "skills_max_chars": 4000,
     "use_plan": false,
     "max_actions_per_step": 5,
     "max_steps": 100,
@@ -44,6 +47,8 @@
     "save_brain_conversation_path": "brain_llm_interactions.log",
     "save_brain_conversation_path_encoding": "utf-8",
     "save_actor_conversation_path": "actor_llm_interactions.log",
-    "save_actor_conversation_path_encoding": "utf-8"
+    "save_planner_conversation_path": "planner_llm_interactions.log",
+    "save_actor_conversation_path_encoding": "utf-8",
+    "save_planner_conversation_path_encoding": "utf-8"
   }
 }

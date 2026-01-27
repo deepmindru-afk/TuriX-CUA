@@ -40,6 +40,12 @@ from src.agent.views import (
 )
 from src.utils.record_store import RecordStore
 from src.utils.brain_search import BrainSearchFlow
+from src.utils.skills import (
+    load_skill_metadata,
+    load_skill_contents,
+    format_skill_catalog,
+    format_skill_context,
+)
 from src.agent.planner_service import Planner
 from src.controller.service import Controller
 from src.utils import time_execution_async
@@ -118,7 +124,12 @@ class Agent:
         memory_llm: BaseChatModel,
         controller: Controller = Controller(),
         use_search: bool = True,
+        use_skills: bool = False,
+        skills_dir: Optional[str] = None,
+        skills_max_chars: int = 4000,
         planner_llm: Optional[BaseChatModel] = None,
+        save_planner_conversation_path: Optional[str] = None,
+        save_planner_conversation_path_encoding: Optional[str] = "utf-8",
         save_brain_conversation_path: Optional[str] = None,
         save_brain_conversation_path_encoding: Optional[str] = "utf-8",
         save_actor_conversation_path: Optional[str] = None,
@@ -168,6 +179,8 @@ class Agent:
         self.save_actor_conversation_path_encoding = save_actor_conversation_path_encoding
         self.save_brain_conversation_path = save_brain_conversation_path
         self.save_brain_conversation_path_encoding = save_brain_conversation_path_encoding
+        self.save_planner_conversation_path = save_planner_conversation_path
+        self.save_planner_conversation_path_encoding = save_planner_conversation_path_encoding or "utf-8"
 
         self.include_attributes = include_attributes
         self.max_error_length = max_error_length
@@ -175,6 +188,12 @@ class Agent:
         self.max_input_tokens = max_input_tokens
         self.save_temp_file_path = os.path.join(os.path.dirname(__file__), "temp_files")
         self.use_search = use_search
+        self.use_skills = use_skills
+        self.skills_dir = Path(skills_dir).expanduser() if skills_dir else None
+        self.skills_max_chars = max(0, skills_max_chars or 0)
+        self.available_skills = []
+        self.selected_skills = []
+        self.skill_context = ""
         self.next_goal = ""
         self.brain_thought = ""
 
@@ -187,15 +206,57 @@ class Agent:
         self.brain_context = OrderedDict()
         self.status = "success"
         self._setup_action_models()
+        # self._set_model_names()
+
+        if self.resume and not agent_id:
+            raise ValueError("Agent ID is required for resuming a task.")
+        self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
+        self.record_dir = os.path.join(self.save_temp_file_path, "records")
+        self.record_store = RecordStore(
+            self.record_dir,
+            encoding=self.save_brain_conversation_path_encoding or "utf-8",
+        )
+        self.memory_snapshot_dir = os.path.join(self.save_temp_file_path, "memory_snapshots")
+        self.memory_snapshot_store = RecordStore(
+            self.memory_snapshot_dir,
+            encoding=self.save_brain_conversation_path_encoding or "utf-8",
+        )
+        self.brain_search = BrainSearchFlow(self.record_store)
+        logger.info("Agent ID: %s", self.agent_id)
+        logger.info("Agent memory path: %s", self.save_temp_file_path)
+
+        if self.use_skills and self.skills_dir:
+            self.available_skills = load_skill_metadata(self.skills_dir)
+            if not self.available_skills:
+                logger.info("No skills loaded from %s", self.skills_dir)
+            else:
+                skill_names = ", ".join(skill.name for skill in self.available_skills)
+                logger.info(
+                    "Loaded %d skill(s) from %s: %s",
+                    len(self.available_skills),
+                    self.skills_dir,
+                    skill_names,
+                )
+        elif self.use_skills:
+            logger.info("Skills enabled but no skills directory provided.")
 
         if self.planner_llm:
+            skill_catalog = ""
+            if self.use_skills and self.available_skills:
+                skill_catalog = format_skill_catalog(self.available_skills)
+            planner_search_llm = self.planner_llm_raw if self.use_search else None
             self.planner = Planner(
                 planner_llm=self.planner_llm,
                 task=self.task,
                 max_input_tokens=self.max_input_tokens,
-                search_llm=self.planner_llm_raw,
+                search_llm=planner_search_llm,
                 use_search=self.use_search,
+                skill_catalog=skill_catalog,
+                save_planner_conversation_path=self.save_planner_conversation_path,
+                save_planner_conversation_path_encoding=self.save_planner_conversation_path_encoding,
             )
+        elif self.use_skills:
+            logger.info("Skills enabled but planner is disabled. Set agent.use_plan=true to select skills.")
 
         self.initiate_messages()
         self._last_result = None
@@ -218,22 +279,24 @@ class Agent:
         self.last_pid = None
         self.ask_for_help = False
 
-        if self.resume and not agent_id:
-            raise ValueError("Agent ID is required for resuming a task.")
-        self.save_temp_file_path = os.path.join(self.save_temp_file_path, f"{self.agent_id}")
-        self.record_dir = os.path.join(self.save_temp_file_path, "records")
-        self.record_store = RecordStore(
-            self.record_dir,
-            encoding=self.save_brain_conversation_path_encoding or "utf-8",
-        )
-        self.memory_snapshot_dir = os.path.join(self.save_temp_file_path, "memory_snapshots")
-        self.memory_snapshot_store = RecordStore(
-            self.memory_snapshot_dir,
-            encoding=self.save_brain_conversation_path_encoding or "utf-8",
-        )
-        self.brain_search = BrainSearchFlow(self.record_store)
-        logger.info("Agent ID: %s", self.agent_id)
-        logger.info("Agent memory path: %s", self.save_temp_file_path)
+    def _set_model_names(self) -> None:
+        self.chat_model_library = self.llm.__class__.__name__
+        if hasattr(self.llm, "model_name"):
+            self.model_name = self.llm.model_name  # type: ignore
+        elif hasattr(self.llm, "model"):
+            self.model_name = self.llm.model  # type: ignore
+        else:
+            self.model_name = "Unknown"
+
+    def set_tool_calling_method(self, tool_calling_method: Optional[str]) -> Optional[str]:
+        if tool_calling_method == "auto":
+            if self.chat_model_library == "ChatGoogleGenerativeAI":
+                return None
+            if self.chat_model_library == "ChatOpenAI":
+                return "function_calling"
+            if self.chat_model_library == "AzureChatOpenAI":
+                return "function_calling"
+            return None
 
     def _setup_action_models(self) -> None:
         """Setup dynamic action models from controller's registry"""
@@ -809,19 +872,95 @@ class Agent:
             raise
 
     async def edit(self):
-        response = await self.planner.edit_task()
-        self._set_new_task(response)
+        result = await self.planner.edit_task()
+        self._set_new_task(result.raw_text, result.payload)
 
     PREFIX = "The overall user's task is: "
     SUFFIX = "The step by step plan is: "
 
-    def _set_new_task(self, generated_plan: str) -> None:
+    def _set_new_task(self, generated_plan: str, plan_payload: Optional[dict] = None) -> None:
+        """
+        Build the final task string:
+            "The overall plan is: <original task>\n\n<generated plan>"
+        and update every MessageManager in one go.
+        """
+        plan_text = generated_plan
+        if isinstance(plan_payload, dict):
+            plan_text = self._format_plan_payload(plan_payload)
         if generated_plan.startswith(self.PREFIX):
             final_task = generated_plan
         else:
-            final_task = f"{self.PREFIX}{self.original_task}\n{self.SUFFIX}\n{generated_plan}"
+            final_task = f"{self.PREFIX}{self.original_task}\n{self.SUFFIX}\n{plan_text}"
+
+        if self.use_skills and self.available_skills:
+            selected = []
+            if isinstance(plan_payload, dict):
+                selected = plan_payload.get("selected_skills", []) or []
+            if isinstance(selected, list):
+                selected = [str(s) for s in selected if isinstance(s, str) and s.strip()]
+            else:
+                selected = []
+
+            self.selected_skills = selected
+            if self.selected_skills:
+                logger.info("Planner selected skills: %s", ", ".join(self.selected_skills))
+            else:
+                logger.info("Planner selected no skills.")
+            skill_contents = load_skill_contents(
+                self.available_skills,
+                self.selected_skills,
+                max_chars=self.skills_max_chars or None,
+            )
+            self.skill_context = format_skill_context(skill_contents)
+            if self.skill_context:
+                final_task = (
+                    f"{final_task}\n\nSelected skills (planner-chosen):\n"
+                    f"{self.skill_context}"
+                )
+
         self.task = final_task
         self.initiate_messages()
+
+    def _format_plan_payload(self, payload: dict) -> str:
+        lines: list[str] = []
+        iteration = payload.get("iteration_info")
+        if isinstance(iteration, dict):
+            current = iteration.get("current_iteration")
+            total = iteration.get("total_iterations")
+            if current and total:
+                lines.append(f"Iteration: {current}/{total}")
+
+        search_summary = payload.get("search_summary")
+        if isinstance(search_summary, str) and search_summary.strip():
+            lines.append(f"Search summary: {search_summary.strip()}")
+
+        selected = payload.get("selected_skills")
+        if isinstance(selected, list):
+            selected_clean = [str(s) for s in selected if isinstance(s, str) and s.strip()]
+            if selected_clean:
+                lines.append(f"Selected skills: {', '.join(selected_clean)}")
+
+        natural_plan = payload.get("natural_language_plan")
+        if isinstance(natural_plan, str) and natural_plan.strip():
+            lines.append("Plan:")
+            lines.append(natural_plan.strip())
+        else:
+            steps = payload.get("step_by_step_plan")
+            if isinstance(steps, list) and steps:
+                lines.append("Plan:")
+                for step in steps:
+                    if not isinstance(step, dict):
+                        continue
+                    desc = step.get("description") or ""
+                    info = step.get("important_search_info") or ""
+                    if not desc:
+                        continue
+                    if info:
+                        lines.append(f"- {desc} (search: {info})")
+                    else:
+                        lines.append(f"- {desc}")
+
+        return "\n".join(lines) if lines else json.dumps(payload, ensure_ascii=False)
 
     def _too_many_failures(self) -> bool:
         if self.consecutive_failures >= self.max_failures:

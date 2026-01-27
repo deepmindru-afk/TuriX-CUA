@@ -197,6 +197,17 @@ def main(config_path: str = "config.json"):
     memory_llm = build_llm(cfg["memory_llm"])
     planner_llm = build_llm(cfg["planner_llm"]) if use_plan else None
     agent_cfg = cfg["agent"]
+    skills_dir = agent_cfg.get("skills_dir")
+    if skills_dir:
+        skills_dir_path = Path(skills_dir)
+        if not skills_dir_path.is_absolute():
+            config_relative = (Path(config_path).parent / skills_dir_path).resolve()
+            if config_relative.exists():
+                skills_dir_path = config_relative
+            else:
+                project_relative = (project_root / skills_dir_path).resolve()
+                skills_dir_path = project_relative
+        skills_dir = skills_dir_path
     controller = Controller()
 
     # Create images directory
@@ -213,6 +224,9 @@ def main(config_path: str = "config.json"):
         controller=controller,
         max_actions_per_step=agent_cfg.get("max_actions_per_step", 5),
         use_search=agent_cfg.get("use_search", True),
+        use_skills=agent_cfg.get("use_skills", False),
+        skills_dir=str(skills_dir) if skills_dir else None,
+        skills_max_chars=agent_cfg.get("skills_max_chars", 4000),
         resume=agent_cfg.get("resume", False),
         agent_id=agent_cfg.get("agent_id"),
         save_brain_conversation_path=agent_cfg.get("save_brain_conversation_path"),
@@ -222,6 +236,10 @@ def main(config_path: str = "config.json"):
         save_actor_conversation_path=agent_cfg.get("save_actor_conversation_path"),
         save_actor_conversation_path_encoding=agent_cfg.get(
             "save_actor_conversation_path_encoding", "utf-8"
+        ),
+        save_planner_conversation_path=agent_cfg.get("save_planner_conversation_path"),
+        save_planner_conversation_path_encoding=agent_cfg.get(
+            "save_planner_conversation_path_encoding", "utf-8"
         ),
     )
 
