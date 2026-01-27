@@ -44,6 +44,7 @@ class ActionItem(BaseModel):
 
 class Analysis(BaseModel):
     analysis: str = Field(..., description="Detailed analysis of how the current state matches the expected state.")
+    sop_check: str = Field(..., description="Selected Skill step for this moment (quote exactly) or 'None'.")
 
 class CurrentState(BaseModel):
     step_evaluate: str = Field(..., description="Success/Failed (based on step completion)")
@@ -55,7 +56,7 @@ class CurrentState(BaseModel):
         ),
     )
     next_goal: str = Field(
-        ..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP"
+        ..., description="Actionable goal based on current state (screenshots/memory) and any Selected Skills; adapt skill steps to the current screen."
     )
 
 class ReadFilesRequest(BaseModel):

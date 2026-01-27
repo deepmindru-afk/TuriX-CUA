@@ -36,7 +36,7 @@ class AgentBrain(BaseModel):
 
     step_evaluate: str = Field(..., description="Success/Failed (based on step completion)")
     ask_human: str = Field(..., description="Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)")
-    next_goal: str = Field(..., description="Goal of this step based on actions, ONLY DESCRIBE THE EXPECTED ACTIONS RESULT OF THIS STEP")
+    next_goal: str = Field(..., description="Actionable goal based on current state (screenshots/memory) and any Selected Skills; adapt skill steps to the current screen.")
 
 class AgentOutput(BaseModel):
     """Output model for agent
