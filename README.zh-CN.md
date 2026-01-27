@@ -40,6 +40,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
       - [3.1 mac辅助功能](#accessibility)
       - [3.2 Safari 自动化](#safari-automation)
    - [4. 配置并运行](#configure-run)
+   - [4.4 Skills（可选）](#skills-optional)
 - [🤝 贡献指南](#contributing)
 - [🗺️ 开发规划](#roadmap)
 
@@ -97,6 +98,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 | **无需应用专用 API** | 只要人能点，TuriX 就能点——WhatsApp、Excel、Outlook、内部工具… |
 | **可热插拔的「大脑」** | 无需改代码即可替换 VLM 策略（`config.json`） |
 | **MCP 就绪** | 可接入 *Claude for Desktop* 或 **任何** 支持 Model Context Protocol (MCP) 的Agent |
+| **Skills（Markdown 手册）** | Planner 仅根据名称/描述选择技能，Brain 使用完整技能内容来指导每一步 |
 
 ---
 ## <a id="model-performance"></a>📊 模型性能
@@ -246,7 +248,36 @@ if provider == "name_you_want":
 ```
 请根据你的 LLM 在 ChatOpenAI、ChatGoogleGenerativeAI、ChatAnthropic 或 ChatOllama 之间切换，并修改对应的模型名称。
 
-#### 4.4 启动Agent
+#### <a id="skills-optional"></a>4.4 Skills（可选）
+
+Skills 是放在单一文件夹中的 Markdown 手册（默认 `skills/`）。每个技能文件以 YAML frontmatter 开头，包含 `name` 和 `description`，后面是操作说明。Planner 只读取名称与描述来选择技能；Brain 会读取完整内容来指导每一步的目标生成。
+Skills 选择需要开启规划功能（`agent.use_plan: true`）。
+
+示例技能文件（`skills/github-web-actions.md`）：
+```md
+---
+name: github-web-actions
+description: 用于在浏览器中操作 GitHub（搜索仓库、点 Star 等）。
+---
+# GitHub Web Actions
+- 打开 GitHub，使用站内搜索并进入仓库页面。
+- 若需要登录，先向用户确认再继续。
+- 在继续之前确认 Star 按钮状态。
+```
+
+在 `examples/config.json` 中启用：
+```json
+{
+  "agent": {
+    "use_plan": true,
+    "use_skills": true,
+    "skills_dir": "skills",
+    "skills_max_chars": 4000
+  }
+}
+```
+
+#### 4.5 启动Agent
 
 ```bash
 python examples/main.py
@@ -254,7 +285,7 @@ python examples/main.py
 
 **享受免手操作的计算体验 🎉**
 
-#### 4.5 恢复已中断的任务
+#### 4.6 恢复已中断的任务
 
 如果任务中断，想从上次位置继续，请在 `examples/config.json` 中设置固定的 `agent_id` 并开启 `resume`：
 ```json
@@ -297,8 +328,8 @@ python examples/main.py
 | **2025 Q4** | **✅ 多智能体架构** | 评估并指导每一步执行 |
 | **2025 Q4** | **✅ Duckduckgo 集成** | 加速信息收集，提升规划效果（multi-agent 分支） |
 | **2026 Q1** | **✅ Ollama 支持** | 支持 Ollama Qwen3vl 模型 |
-| **2026 Q1** | **可恢复的内存压缩** | 推进内存管理机制，稳定性能（上传了测试版，待验证稳定性） |
-| **2026 Q1** | **Skills** | 让CUA的执行流程更标准化，稳定 |
+| **2026 Q1** | **✅ 可恢复的内存压缩** | 推进内存管理机制，稳定性能（上传了测试版，待验证稳定性） |
+| **2026 Q1** | **✅ Skills** | 让CUA的执行流程更标准化，稳定 |
 | **2026 Q1** | **浏览器自动化** | 支持类 Chrome 浏览器以提升可扩展性 |
 | **2026 Q1** | **长期记忆** | 学习用户偏好并跨会话保留任务历史 |
 | **2026 Q2** | **示范学习** | 通过展示你偏好的方法与流程来训练Agent模型 |

@@ -1,11 +1,15 @@
 import asyncio
+from dataclasses import dataclass
 import json
 import logging
+import os
 import re
-from typing import List, Optional
+from typing import Any, List, Optional
+
+from pydantic import BaseModel
 
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
 from src.agent.message_manager.service import MessageManager
 from src.agent.prompts import PlannerPrompt
@@ -38,6 +42,9 @@ class Planner:
                  max_input_tokens: int = 32000,
                  search_llm=None,
                  use_search: bool = True,
+                 skill_catalog: str = "",
+                 save_planner_conversation_path: Optional[str] = None,
+                 save_planner_conversation_path_encoding: Optional[str] = "utf-8",
                  ):
         self.planner_llm = planner_llm
         self.controller = Controller()
@@ -47,6 +54,9 @@ class Planner:
         self._search_context: Optional[str] = None
         self.search_llm = search_llm
         self.use_search = use_search
+        self.skill_catalog = skill_catalog
+        self.save_planner_conversation_path = save_planner_conversation_path
+        self.save_planner_conversation_path_encoding = save_planner_conversation_path_encoding or "utf-8"
 
         self.message_manager = MessageManager(
             llm=self.planner_llm,
@@ -55,6 +65,101 @@ class Planner:
             system_prompt_class=PlannerPrompt,
             max_input_tokens=self.max_input_tokens,
         )
+
+    def _coerce_json_text(self, text: str) -> str:
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return cleaned
+        cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"```$", "", cleaned).strip()
+        if cleaned.startswith("{") and cleaned.endswith("}"):
+            return cleaned
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return cleaned[start:end + 1]
+        return cleaned
+
+    def _parse_json_payload(self, text: str) -> tuple[Optional[dict], str]:
+        cleaned = self._coerce_json_text(text)
+        if not cleaned:
+            return None, text
+        try:
+            payload = json.loads(cleaned)
+        except Exception:
+            return None, text
+        if isinstance(payload, dict) and "content" in payload and isinstance(payload["content"], str):
+            inner_text = payload["content"]
+            inner_cleaned = self._coerce_json_text(inner_text)
+            try:
+                inner_payload = json.loads(inner_cleaned)
+            except Exception:
+                return payload, cleaned
+            if isinstance(inner_payload, dict):
+                return inner_payload, inner_cleaned or inner_text
+        if isinstance(payload, dict):
+            return payload, cleaned
+        return None, cleaned
+
+    def _extract_planner_payload(self, response: Any) -> "PlannerResult":
+        if isinstance(response, BaseMessage):
+            raw_content = getattr(response, "content", "")
+            if isinstance(raw_content, str):
+                raw_text = raw_content
+            else:
+                try:
+                    raw_text = json.dumps(raw_content, ensure_ascii=False)
+                except Exception:
+                    raw_text = str(raw_content)
+            payload, normalized_text = self._parse_json_payload(raw_text)
+            return PlannerResult(raw_text=normalized_text or raw_text, payload=payload)
+
+        if isinstance(response, BaseModel):
+            payload = response.model_dump(exclude_none=True)
+            raw_text = json.dumps(payload, ensure_ascii=False)
+            return PlannerResult(raw_text=raw_text, payload=payload)
+
+        raw_content = getattr(response, "content", "")
+        if isinstance(raw_content, str):
+            raw_text = raw_content
+        else:
+            try:
+                raw_text = json.dumps(raw_content, ensure_ascii=False)
+            except Exception:
+                raw_text = str(raw_content)
+
+        payload, normalized_text = self._parse_json_payload(raw_text)
+        return PlannerResult(raw_text=normalized_text or raw_text, payload=payload)
+
+    def _save_planner_conversation(
+        self,
+        messages: list[BaseMessage],
+        response_text: str,
+        label: str,
+    ) -> None:
+        if not self.save_planner_conversation_path:
+            return
+        file_name = f"{self.save_planner_conversation_path}_planner_{label}.txt"
+        os.makedirs(os.path.dirname(file_name), exist_ok=True) if os.path.dirname(file_name) else None
+        with open(file_name, "w", encoding=self.save_planner_conversation_path_encoding) as f:
+            for message in messages:
+                f.write(f"\n{message.__class__.__name__}\n{'-'*40}\n")
+                content = message.content
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict):
+                            if item.get("type") == "text":
+                                txt = item.get("content") or item.get("text", "")
+                                f.write(f"[Text Content]\n{txt.strip()}\n\n")
+                            elif item.get("type") == "image_url":
+                                image_url = item["image_url"]["url"]
+                                f.write(f"[Image URL]\n{image_url[:100]}...\n\n")
+                else:
+                    f.write(f"{str(content)}\n\n")
+                f.write("\n" + "=" * 60 + "\n")
+            f.write("RESPONSE\n")
+            f.write(str(response_text) + "\n")
+            f.write("\n" + "=" * 60 + "\n")
 
     async def _decide_search_queries(self) -> List[str]:
         """
@@ -282,37 +387,52 @@ class Planner:
 
         return self._search_context
 
-    async def edit_task(self) -> str:
+    async def edit_task(self) -> "PlannerResult":
         if not self.planner_llm:
             return
         controller = Controller()
-        planner_prompt = PlannerPrompt(controller.registry.get_prompt_description())
+        planner_prompt = PlannerPrompt(
+            controller.registry.get_prompt_description(),
+            skill_catalog=self.skill_catalog,
+        )
         system_message = planner_prompt.get_system_message().content
         search_context = await self._get_search_context()
         search_block = ""
+        search_guidance = ""
         if search_context:
             search_block = f"Readable DuckDuckGo findings selected by planner (summary only):\n{search_context}\n\n"
+            search_guidance = (
+                "Use the search findings above to populate the \"important search info\" field in every step "
+                "with concise, useful insights that support that step. "
+                "Include a short summary of the most relevant search findings for the overall task if helpful.\n"
+            )
         content = f"""
                 {system_message}
                 {search_block}
-                Use the search findings above to populate the "important search info" field in every step with concise, useful insights that support that step. Include a short summary of the most relevant search findings for the overall task if helpful.
+                {search_guidance}
                 Now, here is the task you need to break down:
                 "{self.task}"
                 Please follow the guidelines and provide the required JSON output.
                 """
-        response = await self.planner_llm.ainvoke([HumanMessage(content=content)])
-        reply_text = response.content.strip()
+        messages = [HumanMessage(content=content)]
+        response = await self.planner_llm.ainvoke(messages)
+        result = self._extract_planner_payload(response)
+        reply_text = (result.raw_text or "").strip()
         reply_norm = reply_text.upper()
         if "REFUSE TO MAKE PLAN" in reply_norm:
             logging.error("Planner refused. Aborting.")
             raise SystemExit(1)
-        return response.content
+        self._save_planner_conversation(messages, result.raw_text, "initial")
+        return result
 
-    async def continue_edit_task(self, info_memory, task_summary) -> str:
+    async def continue_edit_task(self, info_memory, task_summary) -> "PlannerResult":
         if not self.planner_llm:
             return
         controller = Controller()
-        planner_prompt = PlannerPrompt(controller.registry.get_prompt_description())
+        planner_prompt = PlannerPrompt(
+            controller.registry.get_prompt_description(),
+            skill_catalog=self.skill_catalog,
+        )
         search_context = await self._get_search_context()
         search_block = ""
         if search_context:
@@ -321,12 +441,24 @@ class Planner:
         content += f"The information memory for previous tasks are as follows: {info_memory}\n\n"
         content += f"The previous task you planned and being completed is as follows: '{self.plan_list}'.\n\n"
         content += search_block
-        content += 'Use the search findings above to populate the "important search info" field in every step with concise, useful insights that support that step. Include a short summary of the most relevant search findings for the overall task if helpful.\n'
+        if search_context:
+            content += ('Use the search findings above to populate the "important search info" field in every step '
+                        'with concise, useful insights that support that step. '
+                        'Include a short summary of the most relevant search findings for the overall task if helpful.\n')
         content += f"Based on the above information memory and task summaries, please continue to edit and provide a detailed step-by-step plan for the overall task: '{self.task}'. Ensure that the plan is clear, actionable, avoid the previous plan you generated, and follows the required format."
-        response = await self.planner_llm.ainvoke([planner_prompt.get_system_message(), HumanMessage(content=content)])
-        reply_text = response.content.strip()
+        messages = [planner_prompt.get_system_message(), HumanMessage(content=content)]
+        response = await self.planner_llm.ainvoke(messages)
+        result = self._extract_planner_payload(response)
+        reply_text = (result.raw_text or "").strip()
         reply_norm = reply_text.upper()
         if "REFUSE TO MAKE PLAN" in reply_norm:
             logging.error("Planner refused. Aborting.")
             raise SystemExit(1)
-        return response.content
+        self._save_planner_conversation(messages, result.raw_text, "continue")
+        return result
+
+
+@dataclass(frozen=True)
+class PlannerResult:
+    raw_text: str
+    payload: Optional[dict]

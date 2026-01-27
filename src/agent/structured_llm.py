@@ -164,6 +164,14 @@ class IterationInfo(BaseModel):
 class PlannerOutput(BaseModel):
     iteration_info: IterationInfo
     search_summary: str = Field(..., description="Concise summary of the most relevant search findings.")
+    selected_skills: List[str] = Field(
+        default_factory=list,
+        description="Planner-selected skills by name. Empty list if none apply."
+    )
+    natural_language_plan: Optional[str] = Field(
+        default=None,
+        description="High-level plan in natural language without step IDs."
+    )
     step_by_step_plan: List[Step] = Field(...,
         min_items=1,
         description="Ordered high-level plan objects, each must start with 'Step N'."
@@ -174,6 +182,11 @@ class PlannerOutput(BaseModel):
         lines = []
         if self.search_summary:
             lines.append(f"Search summary: {self.search_summary}")
+        if self.selected_skills:
+            lines.append(f"Selected skills: {', '.join(self.selected_skills)}")
+        if self.natural_language_plan:
+            lines.append("Plan:")
+            lines.append(self.natural_language_plan)
         for step in self.step_by_step_plan:
             info = step.important_search_info or ""
             lines.append(f"{step.step_id}: {step.description} (search: {info})")

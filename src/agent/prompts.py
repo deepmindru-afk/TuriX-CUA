@@ -53,6 +53,7 @@ SYSTEM PROMPT FOR BRAIN MODEL:
 === GLOBAL INSTRUCTIONS ===
 - Environment: macOS. Current time is {self.current_time}.
 - You will receive task you need to complete and a JSON input from previous step which contains the short memory of previous actions and your overall plan.
+- If the task message includes a "Selected skills" section, follow those skill instructions when choosing the next goal.
 - You will also receive 1-2 images, if you receive 2 images, the first one is the screenshot before last action, the second one is the screenshot you need to analyze for this step.
 - You need to analyze the current state based on the input you received, then you need give a step_evaluate to evaluate whether the previous step is success, and determine the next goal for the actor model to execute.
 - You can only ask the actor model to use the apps that are already installed in the computer, {apps_message}
@@ -227,11 +228,26 @@ class PlannerPrompt:
         action_descriptions: str,
         # current_date: datetime,
         max_actions_per_step: int = 10,
+        skill_catalog: str = "",
     ):
         self.action_descriptions = action_descriptions
         # self.current_date = current_date
         self.max_actions_per_step = max_actions_per_step
+        self.skill_catalog = skill_catalog
     def get_system_message(self) -> SystemMessage:
+        skills_block = ""
+        if self.skill_catalog:
+            skills_block = f"""
+=== SKILLS CATALOG ===
+You may select from the skills below using ONLY the skill names listed.
+Use the descriptions to decide which skills help the task.
+{self.skill_catalog}
+"""
+        else:
+            skills_block = """
+=== SKILLS CATALOG ===
+(No skills provided.)
+"""
         return SystemMessage(
 content = f"""
 SYSTEM_PROMPT_FOR_PLANNER
@@ -247,6 +263,8 @@ SYSTEM_PROMPT_FOR_PLANNER
         "total_iterations": times you need to repeat,
     }},
     "search_summary": "Concise summary of the most relevant search findings (empty string if none).",
+    "selected_skills": ["skill-name-1", "skill-name-2"],
+    "natural_language_plan": "High-level plan in natural language (no step IDs, no low-level actions).",
     "step_by_step_plan": [
         {{ "step_id": "Step 1", "description": "[Goal Description]", "important_search_info": "[Relevant search info for this step or empty string]" }},
         {{ "step_id": "Step 2", "description": "[Goal Description]", "important_search_info": "[Relevant search info for this step or empty string]" }},
@@ -257,6 +275,9 @@ SYSTEM_PROMPT_FOR_PLANNER
 - **IMPORTANT STEP ID FORMAT**: Each step in `step_by_step_plan` must have `step_id` as "Step X" starting from 1 (reset per iteration).
 - **IMPORTANT DESCRIPTION CONTENT**: Descriptions must be concise, high-level goals in English, no low-level details (e.g., no keystrokes, clicks). Focus on achieving the step's goal for the CURRENT iteration's specific item/instance.
 - **SEARCH INFO FIELDS**: If no search was used or no relevant findings, set `search_summary` and each `important_search_info` to an empty string.
+- **SKILL SELECTION**: Always include `selected_skills` as a list of skill names from the Skills Catalog. If none apply or no skills are provided, output an empty list [].
+- **NATURAL LANGUAGE PLAN**: Include `natural_language_plan` as a concise, high-level description of the overall plan. Do NOT include step IDs, numbering like "Step 1", or low-level actions (clicks, keystrokes). Prefer 2-6 short sentences or bullets describing the main objectives.
+{skills_block}
 === MULTI-TURN REPETITIVE TASK HANDLING ===
 - **Detect Repetition:** If the task involves repeating similar actions for multiple distinct items (e.g., "download 5 images: url1,url2,..."; "send message to 3 people: Alice, Bob, Charlie"), calculate total_iterations = number of items/instances.
 - **First Turn (Initial Message):** 

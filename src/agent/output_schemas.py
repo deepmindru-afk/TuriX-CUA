@@ -232,6 +232,14 @@ class OutputSchemas:
                 "additionalProperties": False
             },
             "search_summary": {"type": "string"},
+            "selected_skills": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": []
+            },
+            "natural_language_plan": {
+                "type": "string"
+            },
             "step_by_step_plan": {
                 "type": "array",
                 "items": {
@@ -253,7 +261,7 @@ class OutputSchemas:
                 }
             }
         },
-        "required": ["iteration_info", "search_summary", "step_by_step_plan"],
+        "required": ["iteration_info", "search_summary", "selected_skills", "step_by_step_plan"],
         "additionalProperties": False
     }
 
