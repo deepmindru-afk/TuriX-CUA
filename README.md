@@ -44,6 +44,8 @@ Prefer your own model? **Change in `config.json` and go.**
 
 ## 📰 Latest News
 
+**January 27, 2026** - 🎉 We released **Recoverable Memory Compression** and **Skills** in the `multi-agent` and `multi-agent-windows` branches. These features add more stable memory handling and reusable markdown playbooks for task planning.
+
 **December 30, 2025** - 🎉 Significant update in Agent Architecture. We introduce a multi-model architecture in the multi-agent branch, releasing the stress from a single model to multiple models.
 
 **October 16, 2025** - 🚀 Big news for automation enthusiasts! TuriX now fully supports the cutting-edge **Qwen3-VL** vision-language model, empowering seamless PC automation across **Windows**. This integration boosts task success rates by up to 15% on complex UI interactions (based on our internal benchmarks), making your desktop workflows smarter and faster than ever. Whether you're scripting daily routines or tackling intricate projects, Qwen3-VL's advanced multimodal reasoning brings unparalleled precision to the table.
