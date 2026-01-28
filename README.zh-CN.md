@@ -131,9 +131,8 @@ Windows 版本没有 use_ui 参数，状态只有截图。
 
 从我们的[官网](https://turix.ai/api-platform/)获取 API，现在可获 $20 额度。
 登录网站，密钥在页面底部。
-
-在这个 multi-agent 分支，你需要同时配置 brain、actor 和 memory 模型；如果开启规划（`agent.use_plan: true`），还需要配置 planner 模型。
-我们强烈建议你将 turix-actor 模型作为 actor。brain 可以使用你喜欢的任意 VLM，我们的平台提供 qwen3vl，也可以切换到 Gemini3 pro。
+在这个 main（multi-agent）分支，你需要同时配置 brain、actor 和 memory 模型；目前该特性仅支持苹果电脑。如果开启规划（`agent.use_plan: true`），还需要配置 planner 模型。
+我们强烈建议你将 turix-actor 模型作为 actor。brain 可以使用你喜欢的任意 VLM，我们的平台提供 qwen3vl。Gemini-3-pro 被测试为最聪明，Gemini-3-flash 也足够快且智能，适合大多数任务。
 
 在 `examples/config.json` 中编辑 API：
 ```json

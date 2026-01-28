@@ -128,7 +128,9 @@ There is no use_ui parameter in the windows version, the state is only a screens
 
 Get API now with $20 credit from our [official web page](https://turix.ai/api-platform/).
 Login to our website and the key is at the bottom.
-
+In this main (multi-agent) branch, you need to set the brain, actor, and memory models. It only supports mac for now. If you enable planning
+(`agent.use_plan: true`), you also need to set the planner model.
+We strongly recommand you to set the turix-actor model as the actor. The brain can be any VLMs you like, we provide qwen3vl in out platform. Gemini-3-pro is tested to be smartest, and Gemini-3-flash is fast and smart enough for most of the tasks.
 Edit API in `examples/config.json`:
 ```json
 "brain_llm": {
