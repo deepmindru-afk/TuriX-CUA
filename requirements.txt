@@ -20,6 +20,7 @@ langchain-google-genai==2.0.8
 pydantic>=2.10.4
 python-dotenv>=1.0.1
 requests>=2.32.3
+ddgs>=6.1.0
 posthog>=3.7.0
 playwright>=1.49.0
 setuptools>=75.8.0

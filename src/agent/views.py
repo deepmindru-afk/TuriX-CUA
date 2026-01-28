@@ -34,9 +34,10 @@ class ActionResult(BaseModel):
 class AgentBrain(BaseModel):
     """Current state of the agent"""
 
-    evaluation_previous_goal: str = Field(..., description="Success/Failed of previous step (From evaluator)")
-    next_goal: str = Field(..., description="The immediate next goal.")
-    information_stored: str = Field(..., description="Accumulated important information, add continuously, else 'None'")
+    step_evaluate: str = Field(..., description="Success/Failed (based on step completion)")
+    ask_human: str = Field(..., description="Describe what you want user to do or No (No if nothing to ask for comfirmation. If something is unclear, ask the user for confirmation, like ask the user to login, or comfirm preference.)")
+    next_goal: str = Field(..., description="Actionable goal based on current state (screenshots/memory) and any Selected Skills; adapt skill steps to the current screen.")
+
 
 class AgentOutput(BaseModel):
     """Output model for agent
@@ -53,7 +54,6 @@ class AgentOutput(BaseModel):
         max_items=10,                     # ← hard limit
         description="Ordered list of 0-10 actions for this step."
     )
-    current_state: AgentBrain
     @staticmethod
     def type_with_custom_actions(custom_actions: Type[ActionModel]) -> Type['AgentOutput']:
         """Extend actions with custom actions"""

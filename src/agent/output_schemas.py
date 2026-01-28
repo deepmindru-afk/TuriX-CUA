@@ -1,31 +1,11 @@
-# output_schemas.py
-from typing import Any, Dict
-
 class OutputSchemas:
     """
     A container for all model output schemas and their associated response formats.
     """
 
-# Example: output_schemas.py
-
-    AGENT_SCHEMA = {
+    ACTION_SCHEMA = {
         "type": "object",
         "properties": {
-
-            "current_state": {
-                "type": "object",
-                "properties": {
-                    "evaluation_previous_goal": {"type": "string"},
-                    "next_goal": {"type": "string"},
-                    "information_stored": {"type": "string"}
-                },
-                "required": [
-                    "evaluation_previous_goal",
-                    "next_goal",
-                    "information_stored"
-                ]
-            },
-
             "action": {
                 "type": "array",
                 "minItems": 0,
@@ -134,47 +114,156 @@ class OutputSchemas:
 
                     # ----- memory + wait -----
                     "record_info": {"type": "object",
-                        "properties": {"text": {"type": "string"}}},
+                        "properties": {
+                            "text": {"type": "string"},
+                            "file_name": {"type": "string"}
+                        },
+                        "required": ["text", "file_name"]
+                        },
                     "wait": {"type": "object",
                         "properties": {"text": {"type": "string"}}},
                 },
 
                     }
-                }
+                },
+
         },
         "required": [
-            "action",
-            "current_state"
+            "action"
         ]
     }
 
-    AGENT_RESPONSE_FORMAT = {
+    ACTION_RESPONSE_FORMAT = {
         "type": "json_schema",
         "json_schema": {
-            "name": "agent_step_output",
+            "name": "agent_action_output",
             "strict": True,
-            "schema": AGENT_SCHEMA
+            "schema": ACTION_SCHEMA
+        }
+    }
+
+    BRAIN_SCHEMA = {
+        "oneOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "analysis": {
+                        "type": "object",
+                        "properties": {
+                            "analysis": {"type": "string"},
+                            "sop_check": {"type": "string"}
+                        },
+                        "required": ["analysis", "sop_check"]
+                    },
+                    "current_state": {
+                        "type": "object",
+                        "properties": {
+                            "step_evaluate": {"type": "string"},
+                            "ask_human": {"type": "string"},
+                            "next_goal": {"type": "string"},
+                        },
+                        "required": [
+                            "step_evaluate",
+                            "ask_human",
+                            "next_goal"
+                        ]
+                    },
+                },
+                "required": ["analysis", "current_state"],
+                "additionalProperties": False
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "read_files": {
+                        "type": "object",
+                        "properties": {
+                            "files": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1
+                            }
+                        },
+                        "required": ["files"]
+                    }
+                },
+                "required": ["read_files"],
+                "additionalProperties": False
+            }
+        ]
+    }
+
+    BRAIN_RESPONSE_FORMAT = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "agent_state_output",
+            "strict": True,
+            "schema": BRAIN_SCHEMA
+        }
+    }
+
+    MEMORY_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "file_name": {"type": "string"}
+        },
+        "required": ["summary", "file_name"]
+    }
+
+    MEMORY_RESPONSE_FORMAT = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "memory_output",
+            "strict": True,
+            "schema": MEMORY_SCHEMA
         }
     }
 
     PLANNER_SCHEMA = {
-        "anyOf": [
-            {
+        "type": "object",
+        "properties": {
+            "iteration_info": {
                 "type": "object",
                 "properties": {
-                    "step_by_step_plan": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 1
-                    }
+                    "current_iteration": {"type": "integer", "minimum": 1},
+                    "total_iterations": {"type": "integer", "minimum": 1}
                 },
-                "required": ["step_by_step_plan"]
+                "required": ["current_iteration", "total_iterations"],
+                "additionalProperties": False
             },
-            {
-                "type": "string",
-                "enum": ["REFUSE TO MAKE PLAN"]
+            "search_summary": {"type": "string"},
+            "selected_skills": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": []
+            },
+            "natural_language_plan": {
+                "type": "string"
+            },
+            "step_by_step_plan": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "step_id": {
+                            "type": "string",
+                            "pattern": "^Step \\d+$"
+                        },
+                        "description": {
+                            "type": "string"
+                        },
+                        "important_search_info": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["step_id", "description", "important_search_info"],
+                    "additionalProperties": False
+                }
             }
-        ]
+        },
+        "required": ["iteration_info", "search_summary", "selected_skills", "step_by_step_plan"],
+        "additionalProperties": False
     }
 
     PLANNER_RESPONSE_FORMAT = {

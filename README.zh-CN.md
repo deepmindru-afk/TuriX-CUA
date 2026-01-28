@@ -33,13 +33,14 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 - [🖼️ 演示](#demos)
 - [✨ 关键特性](#key-features)
 - [📊 模型性能指标](#model-performance)
-- [🚀 快速开始（macOS 15）](#quickstart-macos-15)
+- [🚀 快速开始（macOS 15+）](#quickstart-macos-15)
    - [1. 下载应用](#download-app)
    - [2. 创建 Python 3.12 环境](#create-python-env)
    - [3. 授予 macOS 权限](#grant-macos-permissions)
       - [3.1 mac辅助功能](#accessibility)
       - [3.2 Safari 自动化](#safari-automation)
    - [4. 配置并运行](#configure-run)
+   - [4.4 Skills（可选）](#skills-optional)
 - [🤝 贡献指南](#contributing)
 - [🗺️ 开发规划](#roadmap)
 
@@ -47,7 +48,11 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 ## <a id="latest-news"></a>📰 最新动态
 
-**2025 年 12 月 30 日** - 🎉Agent架构迎来重要更新。我们在 multi-agent 分支引入多模型架构，将单一模型的压力分散到多个模型上，以减轻注意力机制的负担。
+**2026 年 1 月 27 日 — v0.3** - 🎉 TuriX v0.3 已在 main 分支发布！本次更新带来 DuckDuckGo 搜索、Ollama 支持、先进的可恢复内存压缩，以及 Skills（技能手册），让规划更智能、记忆更稳健、工作流更可复用。欢迎更多用户体验并分享反馈，我们会持续推进平台进化。
+
+**2026 年 1 月 27 日** - 🎉 我们在 `main`（原 `multi-agent`）与 `multi-agent-windows` 分支发布了 **可恢复的内存压缩** 和 **Skills**。这两项功能带来更稳定的记忆管理与可复用的 Markdown 技能手册，用于规划与执行任务。
+
+**2025 年 12 月 30 日** - 🎉Agent架构迎来重要更新。我们在 `main`（原 `multi-agent`）分支引入多模型架构，将单一模型的压力分散到多个模型上，以减轻注意力机制的负担。
 
 **2025 年 10 月 16 日** - 🚀 自动化爱好者的重大消息！TuriX 现已全面支持前沿的 **Qwen3-VL** 视觉语言模型，赋能 **macOS** 与 **Windows** 的顺畅自动化。基于我们的内部基准，该集成在复杂 UI 交互上可将成功率提升多达 15%。无论你是在脚本化日常流程还是处理复杂项目，Qwen3-VL 的多模态推理都能带来前所未有的精度。
 
@@ -97,6 +102,7 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 | **无需应用专用 API** | 只要人能点，TuriX 就能点——WhatsApp、Excel、Outlook、内部工具… |
 | **可热插拔的「大脑」** | 无需改代码即可替换 VLM 策略（`config.json`） |
 | **MCP 就绪** | 可接入 *Claude for Desktop* 或 **任何** 支持 Model Context Protocol (MCP) 的Agent |
+| **Skills（Markdown 手册）** | Planner 仅根据名称/描述选择技能，Brain 使用完整技能内容来指导每一步 |
 
 ---
 ## <a id="model-performance"></a>📊 模型性能
@@ -108,15 +114,19 @@ TuriX 让你的强大 AI 模型能在桌面上真正动手操作。
 
 更多细节请查看我们的 [报告](https://turix.ai/technical-report/)。
 
-## <a id="quickstart-macos-15"></a>🚀 快速开始（macOS 15）
+## <a id="quickstart-macos-15"></a>🚀 快速开始（macOS 15+）
 
 > **我们从不收集数据**——安装、授权，尽情折腾。
 
-> **0. Windows 用户**：请切换到 `windows` 分支获取 Windows 专属的安装与设置说明。
+> **0. Windows 用户**：请切换到 `multi-agent-windows` 分支获取 Windows 专属的安装与设置说明。
 >
 > ```bash
-> git checkout windows
+> git checkout multi-agent-windows
 > ```
+>
+> **0. Windows 旧版用户**：如需此前的 Windows 版本，请切换到 `windows_legacy` 分支。
+>
+> **0. macOS 旧版用户**：如需此前的单模型 macOS 版本，请切换到 `mac_legacy` 分支。
 
 
 ### <a id="download-app"></a>1. 下载应用
@@ -177,24 +187,60 @@ osascript -e 'tell application "Safari" to do JavaScript "alert("Triggering acce
 从我们的[官网](https://turix.ai/api-platform/)获取 API，现在可获 $20 额度。
 登录网站，密钥在页面底部。
 
+在这个 main（multi-agent）分支，你需要同时配置 brain、actor 和 memory 模型；目前该特性仅支持苹果电脑。如果开启规划（`agent.use_plan: true`），还需要配置 planner 模型。
+我们强烈建议你将 turix-actor 模型作为 actor。brain 可以使用你喜欢的任意 VLM，我们的平台提供 qwen3vl。Gemini-3-pro 被测试为最聪明，Gemini-3-flash 也足够快且智能，适合大多数任务。
+
 在 `examples/config.json` 中编辑 API：
 ```json
-"llm": {
+"brain_llm": {
       "provider": "turix",
+      "model_name": "turix-brain-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"actor_llm": {
+      "provider": "turix",
+      "model_name": "turix-actor-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"memory_llm": {
+      "provider": "turix",
+      "model_name": "turix-memory-model",
+      "api_key": "YOUR_API_KEY",
+      "base_url": "https://llm.turixapi.io/v1"
+   },
+"planner_llm": {
+      "provider": "turix",
+      "model_name": "turix-planner-model",
       "api_key": "YOUR_API_KEY",
       "base_url": "https://llm.turixapi.io/v1"
    }
 ```
 
-如果要使用本地 Ollama，请选择支持视觉的模型，并指向你的 Ollama 服务：
+如果要使用本地 Ollama，请将各个角色指向你的 Ollama 服务：
 ```json
-"llm": {
+"brain_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"actor_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"memory_llm": {
+      "provider": "ollama",
+      "model_name": "llama3.2-vision",
+      "base_url": "http://localhost:11434"
+   },
+"planner_llm": {
       "provider": "ollama",
       "model_name": "llama3.2-vision",
       "base_url": "http://localhost:11434"
    }
 ```
-若希望 planner_llm 也使用 Ollama，请同样配置。
 
 #### 4.3 配置自定义模型（可选）
 
@@ -210,13 +256,59 @@ if provider == "name_you_want":
 ```
 请根据你的 LLM 在 ChatOpenAI、ChatGoogleGenerativeAI、ChatAnthropic 或 ChatOllama 之间切换，并修改对应的模型名称。
 
-#### 4.4 启动Agent
+#### <a id="skills-optional"></a>4.4 Skills（可选）
+
+Skills 是放在单一文件夹中的 Markdown 手册（默认 `skills/`）。每个技能文件以 YAML frontmatter 开头，包含 `name` 和 `description`，后面是操作说明。Planner 只读取名称与描述来选择技能；Brain 会读取完整内容来指导每一步的目标生成。
+Skills 选择需要开启规划功能（`agent.use_plan: true`）。
+
+示例技能文件（`skills/github-web-actions.md`）：
+```md
+---
+name: github-web-actions
+description: 用于在浏览器中操作 GitHub（搜索仓库、点 Star 等）。
+---
+# GitHub Web Actions
+- 打开 GitHub，使用站内搜索并进入仓库页面。
+- 若需要登录，先向用户确认再继续。
+- 在继续之前确认 Star 按钮状态。
+```
+
+在 `examples/config.json` 中启用：
+```json
+{
+  "agent": {
+    "use_plan": true,
+    "use_skills": true,
+    "skills_dir": "skills",
+    "skills_max_chars": 4000
+  }
+}
+```
+
+#### 4.5 启动Agent
 
 ```bash
 python examples/main.py
 ```
 
 **享受免手操作的计算体验 🎉**
+
+#### 4.6 恢复已中断的任务
+
+如果任务中断，想从上次位置继续，请在 `examples/config.json` 中设置固定的 `agent_id` 并开启 `resume`：
+```json
+{
+    "agent": {
+         "resume": true,
+         "agent_id": "my-task-001"
+    }
+}
+```
+注意：
+- 使用与你要恢复的运行相同的 `agent_id`。
+- 恢复时请保持同一个 `task`。
+- 只有在 `src/agent/temp_files/<agent_id>/memory.jsonl` 已存在时才会生效。
+- 想重新开始：将 `resume` 设为 `false`、更换 `agent_id`，或删除 `src/agent/temp_files/<agent_id>`。
 
 ## <a id="contributing"></a>🤝 贡献指南
 
@@ -234,16 +326,18 @@ python examples/main.py
 
 | 季度 | 功能 | 描述 |
 |---------|---------|-------------|
+| **2025 Q3** | **✅ 终止与恢复** | 支持从已终止的任务恢复 |
 | **2025 Q3** | **✅ Windows 支持** | 跨平台兼容，把 TuriX 自动化带到 Windows 环境（现已可用） |
 | **2025 Q3** | **✅ 增强的 MCP 集成** | 更深度的 Model Context Protocol 支持，第三方Agent连接更顺畅（现已可用）|
 | **2025 Q4** | **✅ 下一代 AI 模型** | 大幅提升点击准确率和任务执行能力 |
+| **2026 Q2** | **✅ Windows 优化模型** | 面向微软平台的原生 Windows 模型架构，性能更优 |
 | **2025 Q4** | **✅ 支持 Gemini-3-pro 模型** | 可运行任意兼容的视觉语言模型 |
 | **2025 Q4** | **✅ 规划器** | 理解用户意图并制定分步计划以完成任务 |
 | **2025 Q4** | **✅ 多智能体架构** | 评估并指导每一步执行 |
-| **2025 Q4** | **✅ Duckduckgo 集成** | 加速信息收集，提升规划效果（multi-agent 分支） |
-| **2026 Q1** | **Ollama 支持** | 支持 Ollama Qwen3vl 模型 |
-| **2026 Q1** | **工作流自动化** | 记录、编辑并回放复杂多步自动化序列 |
-| **2026 Q1** | **离线模型选项** | 完全本地推理，最大化隐私且不依赖 API |
-| **2026 Q1** | **持久记忆** | 学习用户偏好并跨会话保留任务历史 |
+| **2025 Q4** | **✅ Duckduckgo 集成** | 加速信息收集，提升规划效果（现已并入 main） |
+| **2026 Q1** | **✅ Ollama 支持** | 支持 Ollama Qwen3vl 模型 |
+| **2026 Q1** | **✅ 可恢复的内存压缩** | 推进内存管理机制，稳定性能（上传了测试版，待验证稳定性） |
+| **2026 Q1** | **✅ Skills** | 让CUA的执行流程更标准化，稳定 |
+| **2026 Q1** | **浏览器自动化** | 支持类 Chrome 浏览器以提升可扩展性 |
+| **2026 Q1** | **长期记忆** | 学习用户偏好并跨会话保留任务历史 |
 | **2026 Q2** | **示范学习** | 通过展示你偏好的方法与流程来训练Agent模型 |
-| **2026 Q2** | **Windows 优化模型** | 面向微软平台的原生 Windows 模型架构，性能更优 |

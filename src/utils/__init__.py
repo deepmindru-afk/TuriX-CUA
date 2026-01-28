@@ -2,10 +2,9 @@ import logging
 import time
 from functools import wraps
 from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
+
 logger = logging.getLogger(__name__)
 
-
-# Define generic type variables for return type and parameters
 R = TypeVar('R')
 P = ParamSpec('P')
 
@@ -40,6 +39,4 @@ def time_execution_async(
 		return wrapper
 
 	return decorator
-
-
 

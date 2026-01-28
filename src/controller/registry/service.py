@@ -40,6 +40,7 @@ class Registry:
 		description: str,
 		param_model: Optional[Type[BaseModel]] = None,
 		requires_mac_builder: bool = False,
+		action_name: Optional[str] = None,
 	):
 		"""Decorator for registering actions"""
 
@@ -65,14 +66,15 @@ class Registry:
 			else:
 				wrapped_func = func
 
+			registered_name = action_name or func.__name__
 			action = RegisteredAction(
-				name=func.__name__,
+				name=registered_name,
 				description=description,
 				function=wrapped_func,
 				param_model=actual_param_model,
 				requires_mac_builder=requires_mac_builder,
 			)
-			self.registry.actions[func.__name__] = action
+			self.registry.actions[registered_name] = action
 			return func
 
 		return decorator
