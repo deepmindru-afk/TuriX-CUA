@@ -1,5 +1,6 @@
 {
   "logging_level": "INFO",
+  "output_dir": ".turix_tmp",
   "working_dir_base": "../turix/trainingdata/task",
   "cleanup_previous_runs": true,
 

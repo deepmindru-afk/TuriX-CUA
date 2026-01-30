@@ -134,6 +134,7 @@ class Agent:
         save_brain_conversation_path_encoding: Optional[str] = "utf-8",
         save_actor_conversation_path: Optional[str] = None,
         save_actor_conversation_path_encoding: Optional[str] = "utf-8",
+        artifacts_dir: Optional[str] = None,
         max_failures: int = 5,
         memory_budget: int = 500,
         summary_memory_budget: Optional[int] = None,
@@ -163,6 +164,13 @@ class Agent:
         self.current_time = datetime.now()
         self.agent_id = agent_id or _default_agent_id(task, self.current_time)
         self.task = task
+        self.artifacts_dir = Path(artifacts_dir).expanduser().resolve() if artifacts_dir else None
+        if self.artifacts_dir:
+            self.images_dir = str(self.artifacts_dir / "images" / self.agent_id)
+            self.save_temp_file_path = str(self.artifacts_dir / "temp_files")
+        else:
+            self.images_dir = "images"
+            self.save_temp_file_path = os.path.join(os.path.dirname(__file__), "temp_files")
         self.memory_budget = memory_budget
         self.summary_memory_budget = (
             summary_memory_budget if summary_memory_budget is not None else max(1, memory_budget * 4)
@@ -186,7 +194,6 @@ class Agent:
         self.max_error_length = max_error_length
         self.screenshot_annotated = None
         self.max_input_tokens = max_input_tokens
-        self.save_temp_file_path = os.path.join(os.path.dirname(__file__), "temp_files")
         self.use_search = use_search
         self.use_skills = use_skills
         self.skills_dir = Path(skills_dir).expanduser() if skills_dir else None
@@ -526,7 +533,9 @@ class Agent:
             self.previous_screenshot = self.screenshot_annotated
             screenshot = pyautogui.screenshot()
             self.screenshot_annotated = screenshot
-            screenshot.save(f"images/screenshot_{self.n_steps}.png")
+            os.makedirs(self.images_dir, exist_ok=True)
+            current_screenshot_path = os.path.join(self.images_dir, f"screenshot_{self.n_steps}.png")
+            screenshot.save(current_screenshot_path)
             if self.screenshot_annotated:
                 screenshot_dataurl = screenshot_to_dataurl(self.screenshot_annotated)
             if self.previous_screenshot:
