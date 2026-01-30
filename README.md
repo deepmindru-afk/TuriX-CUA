@@ -283,6 +283,7 @@ For bug reports and feature requests, please [open an issue](https://github.com/
 | **2026 Q1** | **✅ Ollama Support** | Support the Ollama Qwen3vl models |
 | **2026 Q1** | **✅ Recoverable Memory Compression** | Advance memory management mechanism to stabelize performance (Commited beta version) |
 | **2026 Q1** | **✅ Skills** | Stablize the agent workflow. |
+| **2026 Q1** | **OpenClaw (ClawDBot) Skill** | As a skill of clawdbot, so that we act as the eyes and hands of openclaw. Make your OpenClaw the real digital-labour |
 | **2026 Q1** | **Browser Automation** | Support a Chrome-like browser for scalability |
 | **2026 Q1** | **Persistent Memory** | Learn user preferences and maintain task history across sessions |
 | **2026 Q2** | **Learning by Demonstration** | Train the agent by showing it your preferred methods and workflows |
