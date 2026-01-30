@@ -983,6 +983,11 @@ class Agent:
 
         return True
 
+    def stop(self, reason: Optional[str] = None) -> None:
+        if reason:
+            logger.warning("Stopping agent: %s", reason)
+        self._stopped = True
+
     def save_history(self, file_path: Optional[str | Path] = None) -> None:
         if not file_path:
             file_path = "AgentHistory.json"
