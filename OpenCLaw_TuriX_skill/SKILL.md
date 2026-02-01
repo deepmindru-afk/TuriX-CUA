@@ -74,6 +74,34 @@ Logs are saved to `.turix_tmp/logging.log` in the project directory. Check this 
 - LLM interactions and reasoning
 - Errors and recovery attempts
 
+## Important Notes
+
+### How TuriX Runs
+- TuriX can be started via clawdbot `exec` with `pty:true` mode
+- The first launch takes 2-5 minutes to load all AI models (Brain, Actor, Planner, Memory)
+- Background output is buffered - you won't see live progress until task completes or stops
+
+### Before Running
+**Always set PATH first:**
+```bash
+export PATH="/usr/sbin:$PATH"
+cd your_dir/TuriX-CUA
+/opt/anaconda3/envs/turix_env/bin/python examples/main.py
+```
+
+**Why?** The `screencapture` tool is located at `/usr/sbin/screencapture`, which is not in the default PATH.
+
+### Checking if TuriX is Running
+```bash
+# Check process
+ps aux | grep "python.*main" | grep -v grep
+
+# Should show something like:
+# user  57425  0.0  2.4 412396704 600496 s143  Ss+  5:56PM   0:04.76 /opt/anaconda3/envs/turix_env/bin/python examples/main.py
+```
+
+**Note:** The `.turix_tmp` directory may not be created until TuriX starts executing steps.
+
 ## Troubleshooting
 
 ### Common Issues

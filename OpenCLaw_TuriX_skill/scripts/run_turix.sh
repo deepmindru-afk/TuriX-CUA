@@ -8,7 +8,7 @@ set -e
 PROJECT_DIR="your_dir/TuriX-CUA"
 CONFIG_FILE="$PROJECT_DIR/examples/config.json"
 CONDA_PATH="/opt/anaconda3/bin/conda"
-ENV_NAME="mlx_env1"
+ENV_NAME="turix_env"
 
 export PATH="/usr/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 
